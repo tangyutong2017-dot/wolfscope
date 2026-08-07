@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import Field, model_validator
@@ -26,6 +27,64 @@ class StrategyWarning(StrictModel):
     warning_id: str = Field(min_length=1)
     description: str = Field(min_length=1)
     evidence_ids: tuple[str, ...] = ()
+
+
+class WolfPosture(StrEnum):
+    CLAIMANT = "claimant"
+    SUPPORT = "support"
+    DISTANCE = "distance"
+    HIDE = "hide"
+
+
+class WolfAssignment(StrictModel):
+    seat: Seat
+    posture: WolfPosture
+
+
+class WolfTeamPlan(StrictModel):
+    """Small shared private plan; it coordinates wolves without a strategy tree."""
+
+    day: int = Field(ge=1)
+    objective: Literal["hide", "seer_counterclaim", "seer_pressure", "mixed"]
+    primary_claimant: Seat | None = None
+    claimed_role: Literal["seer", "villager", "witch", "hunter"] | None = None
+    fake_check_target: Seat | None = None
+    fake_check_alignment: Literal["good", "werewolf"] | None = None
+    assignments: tuple[WolfAssignment, ...] = Field(min_length=1, max_length=3)
+
+    @model_validator(mode="after")
+    def claim_and_assignments_are_coherent(self):
+        seats = tuple(item.seat for item in self.assignments)
+        if len(seats) != len(set(seats)):
+            raise ValueError("wolf assignments cannot repeat a seat")
+        claimants = tuple(
+            item.seat
+            for item in self.assignments
+            if item.posture is WolfPosture.CLAIMANT
+        )
+        if self.primary_claimant is None:
+            if any(
+                value is not None
+                for value in (
+                    self.claimed_role,
+                    self.fake_check_target,
+                    self.fake_check_alignment,
+                )
+            ):
+                raise ValueError("a no-claim plan cannot contain claim details")
+            if claimants:
+                raise ValueError("a no-claim plan cannot assign a claimant")
+        else:
+            if self.claimed_role is None:
+                raise ValueError("primary claimant requires a claimed role")
+            if claimants != (self.primary_claimant,):
+                raise ValueError("exactly the primary claimant must use claimant posture")
+            if self.claimed_role == "seer":
+                if self.fake_check_target is None or self.fake_check_alignment is None:
+                    raise ValueError("seer claimant requires a complete fake check")
+            elif self.fake_check_target is not None or self.fake_check_alignment is not None:
+                raise ValueError("only a seer claim can contain a fake check")
+        return self
 
 
 class StrategyBrief(StrictModel):
@@ -53,6 +112,7 @@ class StrategyBrief(StrictModel):
     priorities: tuple[StrategyPriority, ...] = Field(max_length=3)
     methods: tuple[StrategyMethod, ...] = Field(max_length=5)
     warnings: tuple[StrategyWarning, ...] = Field(max_length=3)
+    wolf_team_plan: WolfTeamPlan | None = None
 
     @model_validator(mode="after")
     def ids_are_unique_and_evidence_is_local(self):
@@ -66,6 +126,10 @@ class StrategyBrief(StrictModel):
             for evidence_id in warning.evidence_ids
         ):
             raise ValueError("StrategyBrief cannot reference another player's evidence")
+        if self.role is RoleType.WEREWOLF:
+            pass
+        elif self.wolf_team_plan is not None:
+            raise ValueError("only werewolves can receive a wolf team plan")
         return self
 
     @property
@@ -143,6 +207,7 @@ class StrategyBuilder:
             "badge_transfer",
         ],
         situation: DecisionBrief | None = None,
+        wolf_team_plan: WolfTeamPlan | None = None,
     ) -> StrategyBrief:
         priority_id, priority_description = {
             "speech": ("state_useful_position", "给出有信息价值且不泄露私密来源的公开立场。"),
@@ -189,6 +254,9 @@ class StrategyBuilder:
             priorities=(task_priority, role_priority),
             methods=tuple(methods),
             warnings=tuple(warnings[:3]),
+            wolf_team_plan=(
+                wolf_team_plan if role is RoleType.WEREWOLF else None
+            ),
         )
 
     @staticmethod

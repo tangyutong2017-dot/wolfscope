@@ -94,6 +94,8 @@ class ModelConfigTests(unittest.IsolatedAsyncioTestCase):
             model_config_for(ModelProfile.PRODUCTION).model_name,
             "deepseek-v4-pro",
         )
+        self.assertEqual(model_config_for(ModelProfile.TEST).temperature, 0.3)
+        self.assertEqual(model_config_for(ModelProfile.PRODUCTION).temperature, 0.5)
 
     def test_model_config_contains_no_api_key_and_is_immutable(self) -> None:
         config = model_config_for(ModelProfile.TEST)

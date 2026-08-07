@@ -34,7 +34,7 @@ class AdaptiveFakeGateway:
         config,
     ):
         observation = decision_input.observation
-        payload = self._payload(player, task, observation)
+        payload = self._payload(player, task, observation, decision_input)
         record = ModelCallRecord(
             call_id=len(self.records) + 1,
             player=player,
@@ -51,7 +51,7 @@ class AdaptiveFakeGateway:
         )
 
     @staticmethod
-    def _payload(player, task, observation):
+    def _payload(player, task, observation, decision_input):
         common = {"confidence": 0.8, "reason": "自适应本地终局测试"}
         if task is DecisionTask.WOLF_TARGET:
             target = next(
@@ -62,7 +62,23 @@ class AdaptiveFakeGateway:
                     if seat not in observation.wolf_seats
                 ),
             )
-            return {"action": "wolf_target", "target": target, **common}
+            return {
+                "action": "wolf_target",
+                "target": target,
+                "team_plan": {
+                    "day": decision_input.player_view.day,
+                    "objective": "hide",
+                    "primary_claimant": None,
+                    "claimed_role": None,
+                    "fake_check_target": None,
+                    "fake_check_alignment": None,
+                    "assignments": [
+                        {"seat": seat, "posture": "hide"}
+                        for seat in observation.wolf_seats
+                    ],
+                },
+                **common,
+            }
         if task is DecisionTask.SEER_TARGET:
             return {
                 "action": "seer_target",
@@ -132,12 +148,13 @@ class FullHybridGameTests(unittest.IsolatedAsyncioTestCase):
             model_config_for(ModelProfile.TEST),
             lambda _seat: AdaptiveFakeGateway(),
         )
+        provider = AgentGameProvider(
+            view_builder=PlayerViewBuilder(state, events),
+            runtimes=runtimes,
+        )
         result = await GameEngine(
             state,
-            AgentGameProvider(
-                view_builder=PlayerViewBuilder(state, events),
-                runtimes=runtimes,
-            ),
+            provider,
             events,
             max_days=5,
             game_id="m2-adaptive-full-game",
@@ -147,6 +164,13 @@ class FullHybridGameTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(result.winner, Camp.WEREWOLF)
         self.assertIs(result.win_reason, WinReason.ALL_DEITIES_DEAD)
         self.assertEqual(result.days, 3)
+        self.assertEqual(len(provider.wolf_team_plan_history), 3)
+        self.assertTrue(
+            all(
+                {item.seat for item in plan.assignments}
+                for plan in provider.wolf_team_plan_history
+            ),
+        )
         self.assertGreater(
             sum(len(runtimes.get(seat).call_records) for seat in runtimes.seats),
             30,

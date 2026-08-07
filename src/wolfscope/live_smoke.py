@@ -463,6 +463,11 @@ async def run_night_actions() -> dict:
             }
             for death in result.pending_deaths
         ],
+        "wolf_team_plan": (
+            provider.wolf_team_plan.model_dump(mode="json")
+            if provider.wolf_team_plan is not None
+            else None
+        ),
         "trace_summary": {
             "calls": len(records),
             "successful": sum(record.success for record in records),
@@ -560,8 +565,9 @@ async def run_full_game(
     max_days: int,
     vote_context_mode: VoteContextMode,
     replay_output: Path | None,
+    model_profile: ModelProfile,
 ) -> dict:
-    config = model_config_for(ModelProfile.TEST)
+    config = model_config_for(model_profile)
     state = GameFactory.create(seed)
     events = EventLog()
     runtimes = PlayerRuntimeRegistry.create(
@@ -588,7 +594,7 @@ async def run_full_game(
         provider,
         events,
         max_days=max_days,
-        game_id=f"m2-flash-full-seed-{seed}",
+        game_id=f"m2-{config.model_name}-full-seed-{seed}",
     ).run()
     replay_path = None
     if replay_output is not None:
@@ -623,6 +629,8 @@ async def run_full_game(
         "scenario": "full-game",
         "game_id": result.game_id,
         "model": config.model_name,
+        "model_profile": model_profile.value,
+        "temperature": config.temperature,
         "seed": seed,
         "max_days": max_days,
         "vote_context_mode": vote_context_mode.value,
@@ -635,6 +643,10 @@ async def run_full_game(
         "replay_output": str(replay_path) if replay_path else None,
         "provider": "AgentGameProvider",
         "legacy_support_used": False,
+        "wolf_team_plans": [
+            plan.model_dump(mode="json")
+            for plan in provider.wolf_team_plan_history
+        ],
         "trace_summary": {
             "calls": len(records),
             "successful": sum(record.success for record in records),
@@ -745,6 +757,11 @@ def main() -> None:
         help="full-game 的标准 GOD Replay JSON 路径",
     )
     parser.add_argument(
+        "--model-profile",
+        choices=tuple(profile.value for profile in ModelProfile),
+        help="模型档位；full-game 默认 production，其余场景固定使用 test",
+    )
+    parser.add_argument(
         "--output",
         type=Path,
         help="将完整结果（包括 trace）写入 JSON 文件后再打印",
@@ -780,6 +797,11 @@ def main() -> None:
                 max_days=args.max_days,
                 vote_context_mode=VoteContextMode(args.vote_context_mode),
                 replay_output=args.replay_output,
+                model_profile=(
+                    ModelProfile(args.model_profile)
+                    if args.model_profile
+                    else ModelProfile.PRODUCTION
+                ),
             ),
         )
     _emit_result(

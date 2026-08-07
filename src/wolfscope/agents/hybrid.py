@@ -45,7 +45,7 @@ from wolfscope.game.night import WitchAction, WitchActionType
 from wolfscope.player_view import PlayerViewBuilder
 from wolfscope.cognition.context import EvidenceContextBuilder
 from wolfscope.cognition.brief import DecisionBriefBuilder
-from wolfscope.cognition.strategy import StrategyBuilder
+from wolfscope.cognition.strategy import StrategyBuilder, WolfTeamPlan
 
 if TYPE_CHECKING:
     from wolfscope.cognition.extraction import EvidencePipeline
@@ -75,6 +75,8 @@ class AgentGameProvider:
         self.decision_brief_builder = decision_brief_builder or DecisionBriefBuilder()
         self.vote_context_mode = vote_context_mode
         self.strategy_builder = strategy_builder or StrategyBuilder()
+        self.wolf_team_plan: WolfTeamPlan | None = None
+        self.wolf_team_plan_history: list[WolfTeamPlan] = []
 
     async def take_day_turn(self, observation) -> DayTurnAction:
         decision_input = await self._input(
@@ -153,6 +155,7 @@ class AgentGameProvider:
             day=view.day,
             task=observation.task,
             situation=decision_brief,
+            wolf_team_plan=self.wolf_team_plan,
         )
         return AgentDecisionInput(
             player_view=view,
@@ -180,6 +183,8 @@ class AgentGameProvider:
             output_schema=WolfTargetDecision,
             use_safe_fallback=True,
         )
+        self.wolf_team_plan = decision.team_plan
+        self.wolf_team_plan_history.append(decision.team_plan)
         return decision.target
 
     async def choose_seer_target(self, observation):

@@ -16,7 +16,7 @@ from wolfscope.contracts import (
 )
 from wolfscope.cognition.context import EvidenceContext
 from wolfscope.cognition.brief import DecisionBrief
-from wolfscope.cognition.strategy import StrategyBrief
+from wolfscope.cognition.strategy import StrategyBrief, WolfTeamPlan
 from wolfscope.game.day import (
     DayTurnObservation,
     ExileVoteObservation,
@@ -516,6 +516,12 @@ class WolfTargetDecision(StrictModel):
     event_ids: tuple[int, ...] = ()
     evidence_ids: tuple[str, ...] = ()
     strategy_ids: tuple[str, ...] = ()
+    team_plan: WolfTeamPlan = Field(
+        description=(
+            "当前存活狼队共享的私有战术计划；每夜可保持或更新。"
+            "若安排悍跳预言家，必须指定唯一 primary_claimant 和完整假查验。"
+        ),
+    )
 
 
 class SeerTargetDecision(StrictModel):

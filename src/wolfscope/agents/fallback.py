@@ -6,6 +6,8 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
+from wolfscope.cognition.strategy import WolfPosture
+
 from .schemas import (
     AgentDecisionInput,
     DecisionTask,
@@ -85,6 +87,18 @@ def safe_fallback_decision(
             "target": (non_wolves or list(observation.eligible_targets))[0],
             "reason": "模型调用失败，使用确定性合法刀口。",
             "confidence": 0.0,
+            "team_plan": {
+                "day": decision_input.player_view.day,
+                "objective": "hide",
+                "primary_claimant": None,
+                "claimed_role": None,
+                "fake_check_target": None,
+                "fake_check_alignment": None,
+                "assignments": [
+                    {"seat": seat, "posture": WolfPosture.HIDE.value}
+                    for seat in observation.wolf_seats
+                ],
+            },
         }
     elif task is DecisionTask.SEER_TARGET:
         observation = decision_input.observation

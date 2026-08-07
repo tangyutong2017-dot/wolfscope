@@ -200,6 +200,16 @@ class PlayerRuntime:
             if not isinstance(observation, WolfTargetTaskObservation):
                 raise TypeError("WolfTargetDecision requires wolf observation")
             legal_target = decision.target in observation.eligible_targets
+            plan_seats = {item.seat for item in decision.team_plan.assignments}
+            legal_target = legal_target and plan_seats == set(observation.wolf_seats)
+            legal_target = (
+                legal_target
+                and decision.team_plan.day == decision_input.player_view.day
+            )
+            legal_target = legal_target and (
+                decision.team_plan.primary_claimant is None
+                or decision.team_plan.primary_claimant in observation.wolf_seats
+            )
         elif isinstance(decision, SeerTargetDecision):
             observation = decision_input.observation
             if not isinstance(observation, SeerTargetTaskObservation):

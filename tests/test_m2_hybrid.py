@@ -88,6 +88,19 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
                         "target": 4,
                         "confidence": 0.7,
                         "reason": "验证狼人夜间决策",
+                        "team_plan": {
+                            "day": 1,
+                            "objective": "hide",
+                            "primary_claimant": None,
+                            "claimed_role": None,
+                            "fake_check_target": None,
+                            "fake_check_alignment": None,
+                            "assignments": [
+                                {"seat": 1, "posture": "hide"},
+                                {"seat": 2, "posture": "hide"},
+                                {"seat": 3, "posture": "hide"},
+                            ],
+                        },
                     },
                 )
             if seat == 7:

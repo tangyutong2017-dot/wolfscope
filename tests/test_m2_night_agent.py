@@ -5,6 +5,7 @@ import unittest
 from wolfscope.agents.hybrid import HybridProvider
 from wolfscope.agents.runtime import PlayerRuntimeRegistry
 from wolfscope.agents.support import DeterministicSupportProvider
+from wolfscope.agents.schemas import SheriffSignupTaskObservation
 from wolfscope.game import GameState, PlayerState
 from wolfscope.game.config import STANDARD_9_RULES
 from wolfscope.game.events import EventLog
@@ -25,7 +26,25 @@ class NightAgentIntegrationTests(unittest.IsolatedAsyncioTestCase):
         )
         events = EventLog()
         responses = {
-            1: [{"action": "wolf_target", "target": 4, "confidence": 0.8, "reason": "选择民牌刀口"}],
+            1: [{
+                "action": "wolf_target",
+                "target": 4,
+                "confidence": 0.8,
+                "reason": "选择民牌刀口",
+                "team_plan": {
+                    "day": 1,
+                    "objective": "seer_counterclaim",
+                    "primary_claimant": 2,
+                    "claimed_role": "seer",
+                    "fake_check_target": 4,
+                    "fake_check_alignment": "good",
+                    "assignments": [
+                        {"seat": 1, "posture": "support"},
+                        {"seat": 2, "posture": "claimant"},
+                        {"seat": 3, "posture": "distance"},
+                    ],
+                },
+            }],
             7: [{"action": "seer_target", "target": 1, "confidence": 0.8, "reason": "查验高价值位置"}],
             8: [{"action": "save", "target": 4, "confidence": 0.8, "reason": "首夜救人"}],
         }
@@ -65,6 +84,32 @@ class NightAgentIntegrationTests(unittest.IsolatedAsyncioTestCase):
             {"wolf_target", "seer_target", "witch_action"}
             & {call[0] for call in support.calls},
         )
+        wolf_signup_input = await provider._input(
+            2,
+            SheriffSignupTaskObservation(
+                actor=2,
+                eligible_seats=tuple(range(1, 10)),
+            ),
+        )
+        good_signup_input = await provider._input(
+            4,
+            SheriffSignupTaskObservation(
+                actor=4,
+                eligible_seats=tuple(range(1, 10)),
+            ),
+        )
+        self.assertEqual(
+            wolf_signup_input.strategy_brief.wolf_team_plan.primary_claimant,
+            2,
+        )
+        self.assertEqual(
+            tuple(
+                (item.seat, item.posture.value)
+                for item in wolf_signup_input.strategy_brief.wolf_team_plan.assignments
+            ),
+            ((1, "support"), (2, "claimant"), (3, "distance")),
+        )
+        self.assertIsNone(good_signup_input.strategy_brief.wolf_team_plan)
 
 
 if __name__ == "__main__":

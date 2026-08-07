@@ -37,3 +37,14 @@ Strategy 不读取 GOD Replay，不替 Engine 判定规则，不把公开 Claim 
 ## 粗颗粒度 v1
 
 当前实现采用最小静态角色手册加少量动态风险：一句角色目标、最多3项优先级、5种方法和3条警告。本地 `StrategyBuilder` 不调用模型；发言与投票结果通过 `strategy_ids` 声明实际采用的方法，Runtime剔除并记录伪造ID。更细策略树、对手模型、RAG、长期规划和学习型策略留作后续扩展。
+
+## 狼队共享战术计划
+
+单狼各自看到“可以悍跳、冲锋、倒钩或隐藏”仍可能全部选择低风险隐藏，形成局部最优。为提供最低限度的团队协调，狼队协调座位在每次 `wolf_target` 决策中同时生成私有 `WolfTeamPlan`：
+
+- `objective`：隐藏、预言家对跳、压制预言家或混合路线；
+- `primary_claimant` / `claimed_role`：唯一主跳狼及其伪装身份；
+- `fake_check_target` / `fake_check_alignment`：悍跳预言家的完整假查验；
+- `assignments`：每只存活狼的 `claimant/support/distance/hide` 姿态。
+
+Runtime 校验计划天数、存活狼人集合、唯一主跳狼和假查验字段一致性。合法计划进入 `AgentGameProvider.wolf_team_plan_history`，并只注入狼人后续的 `StrategyBrief`；好人视图和 Strategy 均不包含该字段。完整局诊断保存每夜计划，标准 GOD Replay 仍只记录 Engine 信息。模型调用失败时使用“全员隐藏、无人悍跳”的确定性合法计划，不中断对局。

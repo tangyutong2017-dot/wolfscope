@@ -44,6 +44,7 @@ SYSTEM_PROMPT = f"""你正在参加一局标准九人狼人杀。
 EvidenceContext 中 epistemic_status=verified 是当前玩家确认的事实，rule_derivations 是规则必然推导，epistemic_status=claimed 只表示有人公开声称、绝不等于真实。
 SituationBrief 是从当前玩家证据确定性生成的局势索引，不是投票建议。
 StrategyBrief 只提供粗颗粒度目标、方法和风险提醒，不是行动命令；实际采用的策略写入 strategy_ids。
+狼人收到的 wolf_team_plan 是狼队私有协调结果，应按本人 assignment 执行悍跳、支援、倒钩或隐藏姿态；只有新事实使计划明显失效时才偏离，并在简洁依据中说明。
 若决策实际依赖 EvidenceContext，请在 evidence_ids 中引用本玩家的证据 ID；不要编造或引用其他玩家的证据 ID。
 只提交指定的结构化结果，不输出隐藏思维链。"""
 
@@ -67,7 +68,7 @@ def render_decision_prompt(
         DecisionTask.SHERIFF_CAMPAIGN: "完成警长竞选发言，说明竞选立场和组织信息的方法。",
         DecisionTask.SHERIFF_WITHDRAWAL: "听完全部竞选发言后决定是否退水。",
         DecisionTask.SHERIFF_VOTE: "从 candidates 中选择警长；判断不足时可以弃票。",
-        DecisionTask.WOLF_TARGET: "代表当前存活狼队选择今晚唯一合法刀口；允许战术性自刀。",
+        DecisionTask.WOLF_TARGET: "代表当前存活狼队选择今晚唯一合法刀口，并制定或更新一份全体存活狼人共享的私有 team_plan。team_plan 应明确是否安排悍跳、由谁承担，以及其他狼人的冲锋、倒钩或隐藏姿态；允许战术性自刀。",
         DecisionTask.SEER_TARGET: "选择今晚的合法查验目标，不能查验自己或重复查验。",
         DecisionTask.WITCH_ACTION: "根据今晚刀口和剩余药物选择过夜、救人或毒人。",
         DecisionTask.SPEECH_DIRECTION: "作为警长选择今天顺时针或逆时针发言，自己最后发言。",
