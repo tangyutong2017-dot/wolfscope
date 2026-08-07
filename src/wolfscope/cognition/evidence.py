@@ -11,6 +11,8 @@ from wolfscope.contracts import Seat, StrictModel
 from wolfscope.game.night import WitchActionType
 from wolfscope.game.types import Camp, Phase, RoleType
 
+from .claims import PublicClaim
+
 
 class EvidenceModel(StrictModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
@@ -201,6 +203,12 @@ class RawSpeech(EvidenceModel):
     text: str = Field(min_length=1)
 
 
+class PublicClaimEvidence(EvidenceModel):
+    content_type: Literal["public_claim"] = "public_claim"
+    speaker: Seat
+    claim: PublicClaim
+
+
 EvidenceContent = Annotated[
     OwnRoleFact
     | WolfTeammateFact
@@ -224,7 +232,8 @@ EvidenceContent = Annotated[
     | HunterDidNotShootFact
     | BadgeTransferredFact
     | BadgeDestroyedFact
-    | RawSpeech,
+    | RawSpeech
+    | PublicClaimEvidence,
     Field(discriminator="content_type"),
 ]
 

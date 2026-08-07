@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from wolfscope.contracts import GameEvent, PlayerView
 from wolfscope.game.types import Phase, RoleType
 
+from .claims import PublicClaim
 from .evidence import (
     ActualVoteFact,
     BadgeDestroyedFact,
@@ -24,6 +25,8 @@ from .evidence import (
     OwnRoleFact,
     PeacefulNightFact,
     PlayerExiledFact,
+    PublicAnnotationEvidenceSource,
+    PublicClaimEvidence,
     RawSpeech,
     RoleStateEvidenceSource,
     SeerCheckFact,
@@ -135,6 +138,53 @@ class EvidenceLedger:
                 if record is not None:
                     added.append(record)
         return added
+
+    def ingest_public_claims(
+        self,
+        *,
+        event: GameEvent,
+        speaker: int,
+        claims: tuple[PublicClaim, ...],
+        extractor_version: str,
+    ) -> tuple[EvidenceRecord, ...]:
+        """Append cached public annotations using only player-local source IDs."""
+
+        records: list[EvidenceRecord] = []
+        for claim_index, claim in enumerate(claims, start=1):
+            key = (
+                "public_annotation",
+                event.event_id,
+                extractor_version,
+                claim_index,
+            )
+            sequence = len(self.records) + 1
+            point = TemporalPoint(
+                day=event.day,
+                phase=event.phase,
+                local_order=event.event_id,
+            )
+            if key in self._dedupe_keys:
+                continue
+            record = EvidenceRecord(
+                evidence_id=f"p{self.owner}-e{sequence}",
+                owner=self.owner,
+                source=PublicAnnotationEvidenceSource(
+                    view_event_id=event.event_id,
+                    claim_index=claim_index,
+                ),
+                kind=EvidenceKind.CLAIM,
+                epistemic_status=EpistemicStatus.CLAIMED,
+                occurred_at=point,
+                known_at=point,
+                known_order=sequence,
+                content=PublicClaimEvidence(speaker=speaker, claim=claim),
+                extraction_method=ExtractionMethod.LLM,
+                extractor_version=extractor_version,
+            )
+            self._dedupe_keys.add(key)
+            self.records.append(record)
+            records.append(record)
+        return tuple(records)
 
     def _append(
         self,

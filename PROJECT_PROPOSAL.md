@@ -407,7 +407,8 @@ wolfscope/
 - [x] M2-1c：接入 AgentScope 与 DeepSeek Flash，完成发言和放逐投票的真实模型冒烟测试
 - [x] M2-1d：收紧玩家本地事件引用，建立临时 Support Policy，并以 Fake Gateway 跑通单日完整混合局
 - [x] M2-2a：建立九玩家隔离的追加式 EvidenceLedger、确定性 Engine 事件映射和规则必然推导
-- [ ] M2-2b：实现公开发言单次语义提取、公共标注缓存与玩家账本分发
+- [x] M2-2b（离线部分）：实现六类严格公共 Claim、批量提取协议、不可变公共缓存与玩家账本分发
+- [ ] M2-2b：接入 AgentScope 公共语义提取器，并在 HybridProvider 决策前同步 EvidencePipeline
 - [ ] 九个独立 AgentScope 玩家
 - [ ] 感知层和证据账本
 - [ ] 信念状态与启发式身份概率

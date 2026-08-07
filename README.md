@@ -76,7 +76,7 @@ wolfscope-m1 good-win-seed-42 --output-dir replays --overwrite
 python -m unittest discover -s tests
 ```
 
-当前包含 108 项自动化测试：79 项 M1 测试覆盖规则内核、PlayerView 信息隔离、完整循环、第一版缺陷回归、ScriptedProvider 和 Replay 确定性；22 项 M2-1 测试覆盖 AgentScope 决策和混合单日局；7 项 M2-2 测试覆盖九玩家 EvidenceLedger 隔离、确定性事件映射、规则推导、去重和时间边界。
+当前包含 114 项自动化测试：79 项 M1 测试覆盖确定性规则内核；22 项 M2-1 测试覆盖 AgentScope 决策和混合单日局；13 项 M2-2 测试覆盖九玩家 EvidenceLedger、确定性事件映射、规则推导、严格公共 Claim、批量提取缓存、本地 ID 隔离和失败降级。
 
 ## 项目文档
 

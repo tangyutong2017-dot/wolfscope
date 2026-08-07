@@ -48,4 +48,10 @@ EvidenceLedger
 
 ## 当前状态
 
-纯 Python Schema、Ledger、九座位 Registry 和确定性 Event Projector 已完成。公共 Claim 的严格 Schema、一次性 LLM 提取、缓存和账本分发属于 M2-2b，尚未接入 Agent Prompt。
+纯 Python Schema、Ledger、九座位 Registry 和确定性 Event Projector 已完成。
+
+M2-2b 离线部分也已完成：`RoleClaim`、`CheckClaim`、`AlignmentClaim`、`StanceClaim`、`VoteIntentClaim` 和 `VoteRecommendationClaim` 使用严格联合类型；Claim 必须引用原文片段，未来时间、重复 Claim 和无法定位原文的 Claim 会被删除并分类审计。
+
+`EvidencePipeline` 会批量提取当前尚未缓存的公开发言，并以服务端源事件 ID 建立不可变 `PublicSpeechAnnotation` 缓存。不同玩家即使因为私人事件拥有不同的本地 Event ID，也只触发一次公共提取；分发后仍使用各自本地 Event ID 和 Evidence ID。提取器失败会缓存脱敏失败状态，RawSpeech 永远保留且 Engine 不受阻塞。
+
+当前使用 Fake Extractor 完成离线验证，尚未实现真实 AgentScope 公共语义提取器，也尚未把 Pipeline 接入 HybridProvider 的决策前同步。
