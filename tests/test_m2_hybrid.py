@@ -153,6 +153,12 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(vote_input.evidence_context)
             self.assertEqual(vote_input.evidence_context.owner, seat)
             self.assertGreater(vote_input.evidence_context.ledger_revision, 0)
+            self.assertIsNotNone(vote_input.decision_brief)
+            self.assertEqual(vote_input.decision_brief.owner, seat)
+            self.assertEqual(
+                tuple(item.seat for item in vote_input.decision_brief.candidates),
+                vote_input.observation.candidates,
+            )
             self.assertNotIn(
                 "exile_votes",
                 {

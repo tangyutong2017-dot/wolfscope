@@ -21,7 +21,7 @@ BeliefState 是每个玩家根据自己的 EvidenceLedger 构造的主观局面�
 
 ## 下一步
 
-1. 从 BeliefState 生成短 `DecisionBrief`，包含狼人嫌疑排序、角色声明、对跳冲突和关键证据。
-2. 让投票 Prompt 使用 DecisionBrief，减少重复发送全量发言。
+1. 已增加投票专用 `DecisionBrief`：确定性汇总候选人基线、身份声明、公开查验、冲突和当日最后投票意向，不生成投票推荐。
+2. 第一阶段同时发送 DecisionBrief、原始发言和 EvidenceContext；完成真实局对照后再决定是否移除全量发言。
 3. 在现有可审计冲突之上设计权重；冲突目前只作为结构化信号，不会直接修改身份概率或可信度。
 4. 最后才评估 LLM可信度评分，保留纯确定性基线用于 M3 消融。

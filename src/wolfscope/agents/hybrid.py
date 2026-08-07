@@ -17,6 +17,7 @@ from wolfscope.agents.schemas import (
 from wolfscope.game.day import DayTurnAction
 from wolfscope.player_view import PlayerViewBuilder
 from wolfscope.cognition.context import EvidenceContextBuilder
+from wolfscope.cognition.brief import DecisionBriefBuilder
 
 from .support import DeterministicSupportProvider
 
@@ -35,6 +36,7 @@ class HybridProvider:
         support: DeterministicSupportProvider,
         evidence_pipeline: EvidencePipeline | None = None,
         evidence_context_builder: EvidenceContextBuilder | None = None,
+        decision_brief_builder: DecisionBriefBuilder | None = None,
     ) -> None:
         self.view_builder = view_builder
         self.runtimes = runtimes
@@ -43,6 +45,7 @@ class HybridProvider:
         self.evidence_context_builder = (
             evidence_context_builder or EvidenceContextBuilder()
         )
+        self.decision_brief_builder = decision_brief_builder or DecisionBriefBuilder()
 
     async def take_day_turn(self, observation) -> DayTurnAction:
         decision_input = await self._input(
@@ -89,16 +92,28 @@ class HybridProvider:
         view = self.view_builder.build(seat)
         if self.evidence_pipeline is not None:
             await self.evidence_pipeline.sync(view)
+            ledger = self.evidence_pipeline.ledgers.get(seat)
             evidence_context = self.evidence_context_builder.build(
-                self.evidence_pipeline.ledgers.get(seat),
+                ledger,
+            )
+            decision_brief = (
+                self.decision_brief_builder.build(
+                    ledger,
+                    day=view.day,
+                    candidates=observation.candidates,
+                )
+                if isinstance(observation, VoteTaskObservation)
+                else None
             )
         else:
             evidence_context = None
+            decision_brief = None
         return AgentDecisionInput(
             player_view=view,
             public_summary=PublicGameSummary.from_view(view),
             observation=observation,
             evidence_context=evidence_context,
+            decision_brief=decision_brief,
         )
 
     async def choose_wolf_target(self, observation):

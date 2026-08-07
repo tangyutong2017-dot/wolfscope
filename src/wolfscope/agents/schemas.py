@@ -9,6 +9,7 @@ from pydantic import Field, model_validator
 
 from wolfscope.contracts import PlayerView, Probability, Seat, StrictModel
 from wolfscope.cognition.context import EvidenceContext
+from wolfscope.cognition.brief import DecisionBrief
 from wolfscope.game.day import (
     DayTurnObservation,
     ExileVoteObservation,
@@ -83,6 +84,7 @@ class AgentDecisionInput(StrictModel):
     public_summary: PublicGameSummary
     observation: TaskObservation
     evidence_context: EvidenceContext | None = None
+    decision_brief: DecisionBrief | None = None
 
     @model_validator(mode="after")
     def actor_matches_viewer(self) -> AgentDecisionInput:
@@ -101,6 +103,26 @@ class AgentDecisionInput(StrictModel):
             and self.evidence_context.owner != self.player_view.viewer_seat
         ):
             raise ValueError("evidence_context owner must match PlayerView viewer")
+        if self.decision_brief is not None:
+            if not isinstance(self.observation, VoteTaskObservation):
+                raise ValueError("decision_brief is only valid for vote tasks")
+            if self.decision_brief.owner != self.player_view.viewer_seat:
+                raise ValueError("decision_brief owner must match PlayerView viewer")
+            if self.decision_brief.ledger_revision != self.decision_brief.belief_revision:
+                raise ValueError("decision_brief revisions must match")
+            if self.decision_brief.day != self.player_view.day:
+                raise ValueError("decision_brief day must match PlayerView")
+            brief_candidates = tuple(
+                item.seat for item in self.decision_brief.candidates
+            )
+            if brief_candidates != self.observation.candidates:
+                raise ValueError("decision_brief candidates must match vote observation")
+            if (
+                self.evidence_context is not None
+                and self.decision_brief.ledger_revision
+                != self.evidence_context.ledger_revision
+            ):
+                raise ValueError("decision_brief and evidence_context revisions must match")
         return self
 
 
