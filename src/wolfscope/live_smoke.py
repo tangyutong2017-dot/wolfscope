@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from pathlib import Path
+from typing import Any
 
 from wolfscope.agents.runtime import PlayerRuntime
 from wolfscope.agents.hybrid import HybridProvider
@@ -40,6 +42,36 @@ from wolfscope.models.agentscope_gateway import AgentScopeModelGateway
 from wolfscope.models.config import ModelProfile, model_config_for
 from wolfscope.models.claim_extractor import AgentScopePublicClaimExtractor
 from wolfscope.player_view import PlayerViewBuilder
+
+
+def _terminal_result(result: dict[str, Any], *, summary_only: bool) -> dict[str, Any]:
+    """Keep costly live traces on disk while making terminal output readable."""
+    if not summary_only:
+        return result
+    return {
+        key: value
+        for key, value in result.items()
+        if key not in {"traces", "extraction_traces"}
+    }
+
+
+def _emit_result(
+    result: dict[str, Any],
+    *,
+    output: Path | None,
+    summary_only: bool,
+) -> None:
+    serialized = json.dumps(result, ensure_ascii=False, indent=2)
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(serialized + "\n", encoding="utf-8")
+    print(
+        json.dumps(
+            _terminal_result(result, summary_only=summary_only),
+            ensure_ascii=False,
+            indent=2,
+        ),
+    )
 
 
 def _speech_input() -> AgentDecisionInput:
@@ -377,37 +409,34 @@ def main() -> None:
         default=VoteContextMode.FULL.value,
         help="投票Prompt上下文模式；只影响 hybrid-day",
     )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        help="将完整结果（包括 trace）写入 JSON 文件后再打印",
+    )
+    parser.add_argument(
+        "--summary-only",
+        action="store_true",
+        help="终端省略 traces；与 --output 配合可避免大输出丢失",
+    )
     args = parser.parse_args()
     if args.scenario == "speech":
-        print(json.dumps(asyncio.run(run_speech()), ensure_ascii=False, indent=2))
+        result = asyncio.run(run_speech())
     elif args.scenario == "evidence-speech":
-        print(
-            json.dumps(
-                asyncio.run(run_evidence_speech()),
-                ensure_ascii=False,
-                indent=2,
-            ),
-        )
+        result = asyncio.run(run_evidence_speech())
     elif args.scenario == "vote":
-        print(json.dumps(asyncio.run(run_vote()), ensure_ascii=False, indent=2))
+        result = asyncio.run(run_vote())
     elif args.scenario == "hybrid-day":
-        print(
-            json.dumps(
-                asyncio.run(
-                    run_hybrid_day(VoteContextMode(args.vote_context_mode)),
-                ),
-                ensure_ascii=False,
-                indent=2,
-            ),
+        result = asyncio.run(
+            run_hybrid_day(VoteContextMode(args.vote_context_mode)),
         )
     elif args.scenario == "claim-extraction":
-        print(
-            json.dumps(
-                asyncio.run(run_claim_extraction()),
-                ensure_ascii=False,
-                indent=2,
-            ),
-        )
+        result = asyncio.run(run_claim_extraction())
+    _emit_result(
+        result,
+        output=args.output,
+        summary_only=args.summary_only,
+    )
 
 
 if __name__ == "__main__":
