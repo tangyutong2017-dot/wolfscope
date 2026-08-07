@@ -76,7 +76,7 @@ wolfscope-m1 good-win-seed-42 --output-dir replays --overwrite
 python -m unittest discover -s tests
 ```
 
-当前包含 166 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent、夜间角色 Agent、死亡技能/遗言 Agent 和混合单日局，以及 EvidenceLedger、确定性映射、规则推导、严格公共 Claim、逐 Claim 容错解析、失败回归样本、紧凑 EvidenceContext、本地 Evidence/Strategy 引用审计、确定性角色先验与硬证据更新、ID 隔离和失败降级。
+当前包含 167 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent、夜间角色 Agent、死亡技能/遗言 Agent、完整多日 Agent 终局和 Replay 往返，以及 EvidenceLedger、确定性映射、规则推导、严格公共 Claim、逐 Claim 容错解析、失败回归样本、紧凑 EvidenceContext、本地 Evidence/Strategy 引用审计、ID 隔离和失败降级。
 
 ## 项目文档
 
@@ -88,8 +88,9 @@ python -m unittest discover -s tests
 - [M2-1 认知玩家接入设计](docs/M2_1_DESIGN.md)
 - [M2-2 EvidenceLedger 设计](docs/M2_2_EVIDENCE_DESIGN.md)
 - [M2-5 行动 Agent 化](docs/M2_5_ACTION_AGENTIZATION.md)
+- [M2-6 完整 Agent 终局验收](docs/M2_6_FULL_GAME_ACCEPTANCE.md)
 - [架构决策记录](docs/decisions/)
 
 ## 当前阶段
 
-M1 已完成并提交。M2 的公开发言/投票、完整警长竞选、夜间角色行动、PK/遗言、猎人枪权、警长发言方向和警徽处理均已接入座位隔离 Agent。定向 Flash 验证已覆盖警长25次决策、夜间3次决策，以及死亡遗言→猎人开枪→警徽处理连续链；模型请求失败均可审计并安全降级。`ScriptedProvider` 只保留为确定性回归工具，正式路径下一步验证完整多日终局。正式实验中的九名玩家统一使用 DeepSeek Pro，不做动态模型路由。
+M1 已完成，M2 已跑通完整 Agent 对局。正式 `AgentGameProvider` 不依赖 Support，公开发言/投票、警长、夜间角色、PK/遗言、猎人枪权、发言方向和警徽处理均由座位隔离 Runtime 决策。seed 42 的真实 Flash 对局在第2天由狼人屠神结束：54次玩家决策、18次语义提取、44个 GOD 事件，标准 Replay 已通过写入/读取校验。`ScriptedProvider` 只保留为确定性回归工具；正式实验中的九名玩家统一使用 DeepSeek Pro，不做动态模型路由。

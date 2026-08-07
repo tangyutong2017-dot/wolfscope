@@ -1,4 +1,4 @@
-"""Temporary provider routing public M2 tasks to isolated player runtimes."""
+"""Complete Agent-owned game provider plus a legacy M2 compatibility name."""
 
 from __future__ import annotations
 
@@ -47,21 +47,19 @@ from wolfscope.cognition.context import EvidenceContextBuilder
 from wolfscope.cognition.brief import DecisionBriefBuilder
 from wolfscope.cognition.strategy import StrategyBuilder
 
-from .support import DeterministicSupportProvider
-
 if TYPE_CHECKING:
     from wolfscope.cognition.extraction import EvidencePipeline
+    from .support import DeterministicSupportProvider
 
 
-class HybridProvider:
-    """Route speech/votes to agents and all remaining actions to support."""
+class AgentGameProvider:
+    """Route every player-owned game action to an isolated seat runtime."""
 
     def __init__(
         self,
         *,
         view_builder: PlayerViewBuilder,
         runtimes: PlayerRuntimeRegistry,
-        support: DeterministicSupportProvider,
         evidence_pipeline: EvidencePipeline | None = None,
         evidence_context_builder: EvidenceContextBuilder | None = None,
         decision_brief_builder: DecisionBriefBuilder | None = None,
@@ -70,7 +68,6 @@ class HybridProvider:
     ) -> None:
         self.view_builder = view_builder
         self.runtimes = runtimes
-        self.support = support
         self.evidence_pipeline = evidence_pipeline
         self.evidence_context_builder = (
             evidence_context_builder or EvidenceContextBuilder()
@@ -345,3 +342,15 @@ class HybridProvider:
             use_safe_fallback=True,
         )
         return decision.target
+
+
+class HybridProvider(AgentGameProvider):
+    """Backward-compatible name for tests written during incremental M2 routing."""
+
+    def __init__(
+        self,
+        *,
+        support: DeterministicSupportProvider | None = None,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from wolfscope.agents.runtime import PlayerRuntime
-from wolfscope.agents.hybrid import HybridProvider
+from wolfscope.agents.agent_game import AgentGameProvider
 from wolfscope.agents.runtime import PlayerRuntimeRegistry
 from wolfscope.agents.schemas import (
     AgentDecisionInput,
@@ -21,7 +21,6 @@ from wolfscope.agents.schemas import (
     VoteTaskObservation,
     VoteContextMode,
 )
-from wolfscope.agents.support import DeterministicSupportProvider
 from wolfscope.cognition.claims import SpeechExtractionItem
 from wolfscope.cognition.claims import CheckClaim, ClaimAlignment
 from wolfscope.cognition.context import EvidenceContextBuilder
@@ -37,6 +36,7 @@ from wolfscope.game.config import STANDARD_9_RULES
 from wolfscope.game.day import ExileVoteRound
 from wolfscope.game.events import EventLog
 from wolfscope.game.engine import GameEngine
+from wolfscope.game.factory import GameFactory
 from wolfscope.game.night import NightEngine
 from wolfscope.game.sheriff import SheriffElectionEngine
 from wolfscope.game.types import Phase
@@ -45,6 +45,7 @@ from wolfscope.models.agentscope_gateway import AgentScopeModelGateway
 from wolfscope.models.config import ModelProfile, model_config_for
 from wolfscope.models.claim_extractor import AgentScopePublicClaimExtractor
 from wolfscope.player_view import PlayerViewBuilder
+from wolfscope.replay import ReplayWriter
 
 
 def _terminal_result(result: dict[str, Any], *, summary_only: bool) -> dict[str, Any]:
@@ -264,10 +265,9 @@ async def run_hybrid_day(
     claim_extractor = AgentScopePublicClaimExtractor.from_environment(config)
     annotation_cache = PublicSpeechAnnotationCache()
     ledgers = EvidenceLedgerRegistry()
-    provider = HybridProvider(
+    provider = AgentGameProvider(
         view_builder=view_builder,
         runtimes=runtimes,
-        support=DeterministicSupportProvider(),
         evidence_pipeline=EvidencePipeline(
             ledgers=ledgers,
             cache=annotation_cache,
@@ -374,10 +374,9 @@ async def run_sheriff_election() -> dict:
         config,
         lambda _seat: AgentScopeModelGateway.from_environment(config),
     )
-    provider = HybridProvider(
+    provider = AgentGameProvider(
         view_builder=PlayerViewBuilder(state, events),
         runtimes=runtimes,
-        support=DeterministicSupportProvider(),
     )
     result = await SheriffElectionEngine(state, events).run(provider)
     records = [
@@ -438,10 +437,9 @@ async def run_night_actions() -> dict:
         config,
         lambda _seat: AgentScopeModelGateway.from_environment(config),
     )
-    provider = HybridProvider(
+    provider = AgentGameProvider(
         view_builder=PlayerViewBuilder(state, events),
         runtimes=runtimes,
-        support=DeterministicSupportProvider(),
     )
     result = await NightEngine(state, events).run(provider)
     records = [
@@ -513,10 +511,9 @@ async def run_terminal_actions() -> dict:
         config,
         lambda _seat: AgentScopeModelGateway.from_environment(config),
     )
-    provider = HybridProvider(
+    provider = AgentGameProvider(
         view_builder=PlayerViewBuilder(state, events),
         runtimes=runtimes,
-        support=DeterministicSupportProvider(),
     )
     result = await DeathResolutionEngine(state, events).resolve(
         (9,),
@@ -554,6 +551,128 @@ async def run_terminal_actions() -> dict:
             ),
         },
         "traces": [record.model_dump(mode="json") for record in records],
+    }
+
+
+async def run_full_game(
+    *,
+    seed: int,
+    max_days: int,
+    vote_context_mode: VoteContextMode,
+    replay_output: Path | None,
+) -> dict:
+    config = model_config_for(ModelProfile.TEST)
+    state = GameFactory.create(seed)
+    events = EventLog()
+    runtimes = PlayerRuntimeRegistry.create(
+        config,
+        lambda _seat: AgentScopeModelGateway.from_environment(config),
+    )
+    view_builder = PlayerViewBuilder(state, events)
+    claim_extractor = AgentScopePublicClaimExtractor.from_environment(config)
+    annotation_cache = PublicSpeechAnnotationCache()
+    ledgers = EvidenceLedgerRegistry()
+    provider = AgentGameProvider(
+        view_builder=view_builder,
+        runtimes=runtimes,
+        evidence_pipeline=EvidencePipeline(
+            ledgers=ledgers,
+            cache=annotation_cache,
+            extractor=claim_extractor,
+            source_resolver=view_builder,
+        ),
+        vote_context_mode=vote_context_mode,
+    )
+    result = await GameEngine(
+        state,
+        provider,
+        events,
+        max_days=max_days,
+        game_id=f"m2-flash-full-seed-{seed}",
+    ).run()
+    replay_path = None
+    if replay_output is not None:
+        replay_path = ReplayWriter.write(
+            result,
+            replay_output,
+            overwrite=True,
+        )
+        ReplayWriter.read(replay_path)
+    records = [
+        record
+        for seat in runtimes.seats
+        for record in runtimes.get(seat).call_records
+    ]
+    extraction_records = claim_extractor.traces
+    task_stats = {}
+    for task in DecisionTask:
+        task_records = [record for record in records if record.task is task]
+        if task_records:
+            task_stats[task.value] = {
+                "calls": len(task_records),
+                "successful": sum(record.success for record in task_records),
+                "fallbacks": sum(record.fallback_used for record in task_records),
+                "input_tokens": sum(
+                    record.token_usage.input_tokens for record in task_records
+                ),
+                "output_tokens": sum(
+                    record.token_usage.output_tokens for record in task_records
+                ),
+            }
+    return {
+        "scenario": "full-game",
+        "game_id": result.game_id,
+        "model": config.model_name,
+        "seed": seed,
+        "max_days": max_days,
+        "vote_context_mode": vote_context_mode.value,
+        "status": result.status.value,
+        "winner": result.winner.value if result.winner else None,
+        "win_reason": result.win_reason.value if result.win_reason else None,
+        "days": result.days,
+        "final_alive": list(result.final_alive),
+        "event_count": len(result.events),
+        "replay_output": str(replay_path) if replay_path else None,
+        "provider": "AgentGameProvider",
+        "legacy_support_used": False,
+        "trace_summary": {
+            "calls": len(records),
+            "successful": sum(record.success for record in records),
+            "fallbacks": sum(record.fallback_used for record in records),
+            "input_tokens": sum(
+                record.token_usage.input_tokens for record in records
+            ),
+            "output_tokens": sum(
+                record.token_usage.output_tokens for record in records
+            ),
+            "latency_ms": sum(record.latency_ms for record in records),
+            "strategy_references": sum(
+                len(record.accepted_strategy_ids) for record in records
+            ),
+            "invalid_strategy_references": sum(
+                len(record.invalid_strategy_ids) for record in records
+            ),
+            "by_task": task_stats,
+        },
+        "extraction_summary": {
+            "calls": len(extraction_records),
+            "successful": sum(record.success for record in extraction_records),
+            "annotations": len(annotation_cache),
+            "claims": sum(
+                len(annotation.claims) for annotation in annotation_cache.values
+            ),
+            "input_tokens": sum(
+                record.token_usage.input_tokens for record in extraction_records
+            ),
+            "output_tokens": sum(
+                record.token_usage.output_tokens for record in extraction_records
+            ),
+            "latency_ms": sum(record.latency_ms for record in extraction_records),
+        },
+        "traces": [record.model_dump(mode="json") for record in records],
+        "extraction_traces": [
+            record.model_dump(mode="json") for record in extraction_records
+        ],
     }
 
 
@@ -603,6 +722,7 @@ def main() -> None:
             "sheriff-election",
             "night-actions",
             "terminal-actions",
+            "full-game",
             "claim-extraction",
         ),
     )
@@ -611,6 +731,18 @@ def main() -> None:
         choices=tuple(mode.value for mode in VoteContextMode),
         default=VoteContextMode.FULL.value,
         help="投票Prompt上下文模式；只影响 hybrid-day",
+    )
+    parser.add_argument("--seed", type=int, default=42, help="full-game 发牌 seed")
+    parser.add_argument(
+        "--max-days",
+        type=int,
+        default=8,
+        help="full-game 的 Engine 运行保护上限",
+    )
+    parser.add_argument(
+        "--replay-output",
+        type=Path,
+        help="full-game 的标准 GOD Replay JSON 路径",
     )
     parser.add_argument(
         "--output",
@@ -641,6 +773,15 @@ def main() -> None:
         result = asyncio.run(run_night_actions())
     elif args.scenario == "terminal-actions":
         result = asyncio.run(run_terminal_actions())
+    elif args.scenario == "full-game":
+        result = asyncio.run(
+            run_full_game(
+                seed=args.seed,
+                max_days=args.max_days,
+                vote_context_mode=VoteContextMode(args.vote_context_mode),
+                replay_output=args.replay_output,
+            ),
+        )
     _emit_result(
         result,
         output=args.output,

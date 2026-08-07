@@ -2,7 +2,7 @@
 
 ## 边界
 
-本阶段逐项从 `DeterministicSupportProvider` 移交行动所有权，但不把规则裁决交给模型。`HybridProvider` 只把 Engine 已生成的角色授权 Observation 转为座位隔离的 `AgentDecisionInput`；Runtime 校验事件、Evidence、Strategy 和合法目标，Engine 再执行最终领域校验与原子结算。
+本阶段逐项从 `DeterministicSupportProvider` 移交行动所有权，但不把规则裁决交给模型。正式 `AgentGameProvider` 只把 Engine 已生成的角色授权 Observation 转为座位隔离的 `AgentDecisionInput`；Runtime 校验事件、Evidence、Strategy 和合法目标，Engine 再执行最终领域校验与原子结算。`HybridProvider` 仅作为早期测试的兼容类名保留。
 
 ## 已完成：警长阶段
 
@@ -23,8 +23,6 @@ Engine 继续负责候选资格、同时语义、发言顺序、计票、平票�
 
 2026-08-07 Flash 定向验证3次调用全部成功：狼队刀4号，预言家查验3号，女巫看到4号刀口后使用解药，Engine 结算为空死亡名单。共4959输入 token、1357输出 token、约14.6秒累计延迟，6次有效 Strategy 引用且无非法引用。
 
-## 下一步
-
 ## 已完成：死亡技能和遗言
 
 - 警长通过 `speech_direction` 选择白天发言方向。
@@ -38,6 +36,4 @@ Engine 继续负责候选资格、同时语义、发言顺序、计票、平票�
 
 Flash 边界验证模拟“首夜中刀猎人同时当选警长”，按死亡遗言、猎人枪权、警徽处理顺序完成3次决策。最终验证中枪权和警徽调用成功，遗言请求异常后使用可审计最小遗言降级；流程未中断、猎人不开枪、警徽被撕毁。
 
-## 下一步
-
-运行完整多日 Agent 终局，生成 GOD Replay，并验证终局、调用追踪和失败降级在长期循环中保持一致。
+完整多日 Agent 终局验收见 `M2_6_FULL_GAME_ACCEPTANCE.md`。

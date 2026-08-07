@@ -1,8 +1,8 @@
 # WolfScope 项目立项书（讨论稿）
 
-> 状态：Draft v0.2
+> 状态：M2 端到端验收完成
 > 日期：2026-08-06
-> 当前阶段：M0 立项与技术验证
+> 当前阶段：M2 AgentScope 认知玩家完成首局真实端到端对局
 > 文档约定：标记为「已决定」的内容作为当前基线；标记为「待讨论」的内容在开发前共同确认。
 
 ## 1. 项目名称
@@ -410,22 +410,22 @@ wolfscope/
 - [x] M2-2b（离线部分）：实现六类严格公共 Claim、批量提取协议、不可变公共缓存与玩家账本分发
 - [x] M2-2b：接入只读公开文本的 AgentScope 语义提取器，并在 HybridProvider 决策前同步 EvidencePipeline
 - [x] M2-2b 回归保障：逐 Claim 容错、字段级诊断和真实失败样本库；完整语义 Gold 与正式 Precision/Recall 延后到确有评测需求时建设
-- [ ] 九个独立 AgentScope 玩家
+- [x] 九个独立 AgentScope 玩家
 - [x] 感知层和证据账本：玩家本地 Ledger、紧凑 EvidenceContext、决策前同步及 Evidence ID 引用审计
 - [x] 信念状态第一步：标准角色先验、硬身份/查验更新、公开角色声明登记和唯一神职对跳冲突
 - [ ] 信念状态与启发式身份概率
-- [ ] 策略库与局面检索
+- [x] 粗粒度角色策略库、局面风险提示与 Strategy ID 引用审计
 - [ ] 票型和概率工具
 - [ ] 候选行动规划
 - [ ] 发言前反思和泄漏检查
-- [ ] token、耗时、重试和工具调用追踪
-- [ ] 完成至少一局真实模型端到端对局
+- [x] token、耗时、格式修复、失败降级和 Evidence/Strategy 引用追踪
+- [x] 完成至少一局真实模型端到端对局，并生成可读取 GOD Replay
 
 完成标准：Agent 能引用结构化证据进行决策，行动合法，私有信息边界测试通过，并产生完整可审计 Replay。
 
 M2 模型策略固定为：自动化测试默认使用 Fake Gateway；M2-1 真实接口开发和冒烟测试使用 `deepseek-v4-flash`；正式对局九名玩家统一使用 `deepseek-v4-pro`。单局内不按角色、阶段或任务动态路由模型，以减少实验混杂变量。API 密钥只从运行环境注入，不进入配置对象、日志或 Replay。
 
-Provider 定位固定为：`ScriptedProvider` 永久服务于确定性规则回归，不进入正式 LLM 对局；`HybridProvider` 和 `DeterministicSupportProvider` 只是 M2 渐进接入脚手架；所有主观行动迁移完成后，正式路径收敛为完整 `AgentScopeProvider`。
+Provider 定位固定为：`ScriptedProvider` 永久服务于确定性规则回归，不进入正式 LLM 对局；`HybridProvider` 和 `DeterministicSupportProvider` 只保留为 M2 历史兼容脚手架；正式路径已经收敛为不依赖 Support 的完整 `AgentGameProvider`。
 
 ### M3：评测、消融与作品集交付
 
