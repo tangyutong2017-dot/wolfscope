@@ -1,0 +1,1105 @@
+{
+  "schema_version": "1.0",
+  "game_id": "hunter-tie-break-seed-42",
+  "seed": 42,
+  "status": "finished",
+  "winner": "good",
+  "win_reason": "all_wolves_dead",
+  "days": 4,
+  "roles": {
+    "1": "witch",
+    "2": "werewolf",
+    "3": "villager",
+    "4": "villager",
+    "5": "werewolf",
+    "6": "hunter",
+    "7": "werewolf",
+    "8": "villager",
+    "9": "seer"
+  },
+  "final_alive": [
+    8
+  ],
+  "events": [
+    {
+      "event_id": 1,
+      "day": 1,
+      "phase": "setup",
+      "event_type": "game_started",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "九人狼人杀开始",
+      "data": {
+        "game_id": "hunter-tie-break-seed-42",
+        "seed": 42
+      }
+    },
+    {
+      "event_id": 2,
+      "day": 1,
+      "phase": "setup",
+      "event_type": "wolf_teammates",
+      "visibility": "wolves",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "狼队成员：2号、5号、7号",
+      "data": {
+        "seats": [
+          2,
+          5,
+          7
+        ]
+      }
+    },
+    {
+      "event_id": 3,
+      "day": 1,
+      "phase": "setup",
+      "event_type": "initial_roles",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "初始身份已确定",
+      "data": {
+        "roles": [
+          {
+            "seat": 1,
+            "role": "witch"
+          },
+          {
+            "seat": 2,
+            "role": "werewolf"
+          },
+          {
+            "seat": 3,
+            "role": "villager"
+          },
+          {
+            "seat": 4,
+            "role": "villager"
+          },
+          {
+            "seat": 5,
+            "role": "werewolf"
+          },
+          {
+            "seat": 6,
+            "role": "hunter"
+          },
+          {
+            "seat": 7,
+            "role": "werewolf"
+          },
+          {
+            "seat": 8,
+            "role": "villager"
+          },
+          {
+            "seat": 9,
+            "role": "seer"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": 4,
+      "day": 1,
+      "phase": "night_wolf",
+      "event_type": "wolf_target",
+      "visibility": "wolves",
+      "recipients": [],
+      "actor": null,
+      "target": 1,
+      "content": "狼队选择袭击 1 号",
+      "data": {
+        "target": 1
+      }
+    },
+    {
+      "event_id": 5,
+      "day": 1,
+      "phase": "night_seer",
+      "event_type": "seer_result",
+      "visibility": "private",
+      "recipients": [
+        9
+      ],
+      "actor": 9,
+      "target": 2,
+      "content": "查验 2 号的结果为 werewolf",
+      "data": {
+        "target": 2,
+        "alignment": "werewolf"
+      }
+    },
+    {
+      "event_id": 6,
+      "day": 1,
+      "phase": "night_witch",
+      "event_type": "witch_night_victim",
+      "visibility": "private",
+      "recipients": [
+        1
+      ],
+      "actor": 1,
+      "target": 1,
+      "content": "今晚狼队袭击了 1 号",
+      "data": {
+        "target": 1
+      }
+    },
+    {
+      "event_id": 7,
+      "day": 1,
+      "phase": "night_witch",
+      "event_type": "witch_action",
+      "visibility": "private",
+      "recipients": [
+        1
+      ],
+      "actor": 1,
+      "target": null,
+      "content": "女巫选择 pass",
+      "data": {
+        "action": "pass",
+        "target": null
+      }
+    },
+    {
+      "event_id": 8,
+      "day": 1,
+      "phase": "night_resolution",
+      "event_type": "night_resolution",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "夜间内部结算完成，死亡尚未公布",
+      "data": {
+        "pending_deaths": [
+          {
+            "seat": 1,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ],
+        "wolf_recipients": [
+          2,
+          5,
+          7
+        ]
+      }
+    },
+    {
+      "event_id": 9,
+      "day": 1,
+      "phase": "sheriff_signup",
+      "event_type": "sheriff_candidates",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "无人上警",
+      "data": {
+        "candidates": []
+      }
+    },
+    {
+      "event_id": 10,
+      "day": 1,
+      "phase": "sheriff_vote",
+      "event_type": "sheriff_failed",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "本局流警，无警长",
+      "data": {
+        "reason": "no_candidates"
+      }
+    },
+    {
+      "event_id": 11,
+      "day": 1,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_deaths",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "昨夜死亡：1号",
+      "data": {
+        "deaths": [
+          1
+        ]
+      }
+    },
+    {
+      "event_id": 12,
+      "day": 1,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_death_causes",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "首夜死亡原因已结算",
+      "data": {
+        "deaths": [
+          {
+            "seat": 1,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": 13,
+      "day": 1,
+      "phase": "death_last_words",
+      "event_type": "last_words",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 1,
+      "target": null,
+      "content": "1号女巫首夜出局",
+      "data": {}
+    },
+    {
+      "event_id": 14,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "speaking_order",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "无警长，从6号开始顺时针发言",
+      "data": {
+        "start": 6,
+        "direction": "clockwise",
+        "order": [
+          6,
+          7,
+          8,
+          9,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "event_id": 15,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 6,
+      "target": null,
+      "content": "6号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 16,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 7,
+      "target": null,
+      "content": "7号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 17,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 8,
+      "target": null,
+      "content": "8号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 18,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 9,
+      "target": null,
+      "content": "9号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 19,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 2,
+      "target": null,
+      "content": "2号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 20,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 3,
+      "target": null,
+      "content": "3号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 21,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": null,
+      "content": "4号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 22,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 5,
+      "target": null,
+      "content": "5号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 23,
+      "day": 1,
+      "phase": "day_vote",
+      "event_type": "exile_votes",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "放逐投票结果公布",
+      "data": {
+        "votes": [
+          {
+            "voter": 2,
+            "target": 5,
+            "units": 2
+          },
+          {
+            "voter": 3,
+            "target": 2,
+            "units": 2
+          },
+          {
+            "voter": 4,
+            "target": 2,
+            "units": 2
+          },
+          {
+            "voter": 5,
+            "target": 2,
+            "units": 2
+          },
+          {
+            "voter": 6,
+            "target": 2,
+            "units": 2
+          },
+          {
+            "voter": 7,
+            "target": 2,
+            "units": 2
+          },
+          {
+            "voter": 8,
+            "target": 2,
+            "units": 2
+          },
+          {
+            "voter": 9,
+            "target": 2,
+            "units": 2
+          }
+        ],
+        "vote_units": {
+          "5": 2,
+          "2": 14
+        }
+      }
+    },
+    {
+      "event_id": 24,
+      "day": 1,
+      "phase": "day_vote",
+      "event_type": "player_exiled",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 2,
+      "target": null,
+      "content": "2号被放逐",
+      "data": {
+        "seat": 2
+      }
+    },
+    {
+      "event_id": 25,
+      "day": 1,
+      "phase": "day_vote",
+      "event_type": "last_words",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 2,
+      "target": null,
+      "content": "2号狼人被放逐",
+      "data": {}
+    },
+    {
+      "event_id": 26,
+      "day": 2,
+      "phase": "night_wolf",
+      "event_type": "wolf_target",
+      "visibility": "wolves",
+      "recipients": [],
+      "actor": null,
+      "target": 9,
+      "content": "狼队选择袭击 9 号",
+      "data": {
+        "target": 9
+      }
+    },
+    {
+      "event_id": 27,
+      "day": 2,
+      "phase": "night_seer",
+      "event_type": "seer_result",
+      "visibility": "private",
+      "recipients": [
+        9
+      ],
+      "actor": 9,
+      "target": 5,
+      "content": "查验 5 号的结果为 werewolf",
+      "data": {
+        "target": 5,
+        "alignment": "werewolf"
+      }
+    },
+    {
+      "event_id": 28,
+      "day": 2,
+      "phase": "night_resolution",
+      "event_type": "night_resolution",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "夜间内部结算完成，死亡尚未公布",
+      "data": {
+        "pending_deaths": [
+          {
+            "seat": 9,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ],
+        "wolf_recipients": [
+          5,
+          7
+        ]
+      }
+    },
+    {
+      "event_id": 29,
+      "day": 2,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_deaths",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "昨夜死亡：9号",
+      "data": {
+        "deaths": [
+          9
+        ]
+      }
+    },
+    {
+      "event_id": 30,
+      "day": 2,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_death_causes",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "首夜死亡原因已结算",
+      "data": {
+        "deaths": [
+          {
+            "seat": 9,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": 31,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "speaking_order",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "无警长，从5号开始顺时针发言",
+      "data": {
+        "start": 5,
+        "direction": "clockwise",
+        "order": [
+          5,
+          6,
+          7,
+          8,
+          3,
+          4
+        ]
+      }
+    },
+    {
+      "event_id": 32,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 5,
+      "target": null,
+      "content": "5号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 33,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 6,
+      "target": null,
+      "content": "6号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 34,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 7,
+      "target": null,
+      "content": "7号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 35,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 8,
+      "target": null,
+      "content": "8号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 36,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 3,
+      "target": null,
+      "content": "3号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 37,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": null,
+      "content": "4号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 38,
+      "day": 2,
+      "phase": "day_vote",
+      "event_type": "exile_votes",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "放逐投票结果公布",
+      "data": {
+        "votes": [
+          {
+            "voter": 3,
+            "target": 5,
+            "units": 2
+          },
+          {
+            "voter": 4,
+            "target": 5,
+            "units": 2
+          },
+          {
+            "voter": 5,
+            "target": 4,
+            "units": 2
+          },
+          {
+            "voter": 6,
+            "target": 5,
+            "units": 2
+          },
+          {
+            "voter": 7,
+            "target": 5,
+            "units": 2
+          },
+          {
+            "voter": 8,
+            "target": 5,
+            "units": 2
+          }
+        ],
+        "vote_units": {
+          "5": 10,
+          "4": 2
+        }
+      }
+    },
+    {
+      "event_id": 39,
+      "day": 2,
+      "phase": "day_vote",
+      "event_type": "player_exiled",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 5,
+      "target": null,
+      "content": "5号被放逐",
+      "data": {
+        "seat": 5
+      }
+    },
+    {
+      "event_id": 40,
+      "day": 2,
+      "phase": "day_vote",
+      "event_type": "last_words",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 5,
+      "target": null,
+      "content": "5号狼人被放逐",
+      "data": {}
+    },
+    {
+      "event_id": 41,
+      "day": 3,
+      "phase": "night_wolf",
+      "event_type": "wolf_target",
+      "visibility": "wolves",
+      "recipients": [],
+      "actor": null,
+      "target": 3,
+      "content": "狼队选择袭击 3 号",
+      "data": {
+        "target": 3
+      }
+    },
+    {
+      "event_id": 42,
+      "day": 3,
+      "phase": "night_resolution",
+      "event_type": "night_resolution",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "夜间内部结算完成，死亡尚未公布",
+      "data": {
+        "pending_deaths": [
+          {
+            "seat": 3,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ],
+        "wolf_recipients": [
+          7
+        ]
+      }
+    },
+    {
+      "event_id": 43,
+      "day": 3,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_deaths",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "昨夜死亡：3号",
+      "data": {
+        "deaths": [
+          3
+        ]
+      }
+    },
+    {
+      "event_id": 44,
+      "day": 3,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_death_causes",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "首夜死亡原因已结算",
+      "data": {
+        "deaths": [
+          {
+            "seat": 3,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": 45,
+      "day": 3,
+      "phase": "day_speech",
+      "event_type": "speaking_order",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "无警长，从4号开始顺时针发言",
+      "data": {
+        "start": 4,
+        "direction": "clockwise",
+        "order": [
+          4,
+          6,
+          7,
+          8
+        ]
+      }
+    },
+    {
+      "event_id": 46,
+      "day": 3,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": null,
+      "content": "4号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 47,
+      "day": 3,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 6,
+      "target": null,
+      "content": "6号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 48,
+      "day": 3,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 7,
+      "target": null,
+      "content": "7号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 49,
+      "day": 3,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 8,
+      "target": null,
+      "content": "8号白天发言",
+      "data": {}
+    },
+    {
+      "event_id": 50,
+      "day": 3,
+      "phase": "day_vote",
+      "event_type": "exile_votes",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "放逐投票结果公布",
+      "data": {
+        "votes": [
+          {
+            "voter": 4,
+            "target": 7,
+            "units": 2
+          },
+          {
+            "voter": 6,
+            "target": 4,
+            "units": 2
+          },
+          {
+            "voter": 7,
+            "target": 4,
+            "units": 2
+          },
+          {
+            "voter": 8,
+            "target": 4,
+            "units": 2
+          }
+        ],
+        "vote_units": {
+          "7": 2,
+          "4": 6
+        }
+      }
+    },
+    {
+      "event_id": 51,
+      "day": 3,
+      "phase": "day_vote",
+      "event_type": "player_exiled",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": null,
+      "content": "4号被放逐",
+      "data": {
+        "seat": 4
+      }
+    },
+    {
+      "event_id": 52,
+      "day": 3,
+      "phase": "day_vote",
+      "event_type": "last_words",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": null,
+      "content": "4号平民被放逐",
+      "data": {}
+    },
+    {
+      "event_id": 53,
+      "day": 4,
+      "phase": "night_wolf",
+      "event_type": "wolf_target",
+      "visibility": "wolves",
+      "recipients": [],
+      "actor": null,
+      "target": 6,
+      "content": "狼队选择袭击 6 号",
+      "data": {
+        "target": 6
+      }
+    },
+    {
+      "event_id": 54,
+      "day": 4,
+      "phase": "night_resolution",
+      "event_type": "night_resolution",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "夜间内部结算完成，死亡尚未公布",
+      "data": {
+        "pending_deaths": [
+          {
+            "seat": 6,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ],
+        "wolf_recipients": [
+          7
+        ]
+      }
+    },
+    {
+      "event_id": 55,
+      "day": 4,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_deaths",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "昨夜死亡：6号",
+      "data": {
+        "deaths": [
+          6
+        ]
+      }
+    },
+    {
+      "event_id": 56,
+      "day": 4,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_death_causes",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "首夜死亡原因已结算",
+      "data": {
+        "deaths": [
+          {
+            "seat": 6,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": 57,
+      "day": 4,
+      "phase": "hunter_shot",
+      "event_type": "hunter_shot",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 6,
+      "target": 7,
+      "content": "6号猎人开枪带走7号",
+      "data": {
+        "hunter": 6,
+        "target": 7
+      }
+    },
+    {
+      "event_id": 58,
+      "day": 4,
+      "phase": "finished",
+      "event_type": "game_finished",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "游戏结束：good阵营获胜",
+      "data": {
+        "winner": "good",
+        "reason": "all_wolves_dead",
+        "roles": [
+          {
+            "seat": 1,
+            "role": "witch"
+          },
+          {
+            "seat": 2,
+            "role": "werewolf"
+          },
+          {
+            "seat": 3,
+            "role": "villager"
+          },
+          {
+            "seat": 4,
+            "role": "villager"
+          },
+          {
+            "seat": 5,
+            "role": "werewolf"
+          },
+          {
+            "seat": 6,
+            "role": "hunter"
+          },
+          {
+            "seat": 7,
+            "role": "werewolf"
+          },
+          {
+            "seat": 8,
+            "role": "villager"
+          },
+          {
+            "seat": 9,
+            "role": "seer"
+          }
+        ]
+      }
+    }
+  ]
+}

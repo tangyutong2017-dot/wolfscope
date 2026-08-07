@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wolfscope"
+version = "0.1.0"
+description = "基于 AgentScope 的九人狼人杀多智能体博弈与评测系统"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "agentscope==2.0.5",
+  "pydantic>=2.10,<3",
+]
+
+[project.scripts]
+wolfscope-m1 = "wolfscope.cli:main"
+
+[project.optional-dependencies]
+dev = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
