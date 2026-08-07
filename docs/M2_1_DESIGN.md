@@ -67,3 +67,25 @@ EventLog 与 `PlayerViewBuilder` 继续充当信息流权威。本阶段不引�
 2026-08-07 已完成 `deepseek-v4-flash` 单玩家冒烟：发言结构化结果首次通过，耗时 4428 ms，输入 1335 token、输出 333 token；投票在 `(1, 7)` 对跳预言家候选中选择合法目标 7 号，首次通过，耗时 9909 ms，输入 1690 token、输出 759 token。两次调用均未触发格式修复或 fallback。
 
 投票冒烟同时显示：在正式 Evidence 账本尚未实现时，模型会自行生成 `event_id:1` 一类引用格式。混合 Provider 接入前需要明确区分玩家本地事件引用与 M2-2 Evidence ID，避免把未验证的自由字符串当作有效证据。
+
+该问题现已通过协议收紧解决：M2-1 决策只接受整数 `event_ids`，Runtime 会根据当前 `PlayerView.visible_events` 删除并记录越权或不存在的引用。`evidence_ids` 与 `strategy_ids` 暂不出现在模型输出中，分别等待 M2-2 Evidence 账本和后续策略库提供真实 ID 后再加入。
+
+## 过渡 Provider
+
+`ScriptedProvider` 继续专用于 M1 精确回归，不再作为 LLM 正式路径的依赖。M2 过渡期由 `HybridProvider` 将普通发言和放逐投票交给座位独立 Runtime，其余接口交给不包含狼人杀策略的 `DeterministicSupportProvider`。Support 只返回简单合法选择，随着 Agent 行动覆盖增加而逐项退出。
+
+Fake Gateway 已完成一局 `max_days=1` 的完整集成验证：第一夜、无人竞选警长、首夜死亡公布、八名存活玩家发言、同时投票、放逐与猎人死亡链均由真实 Engine 推进。测试同时确认 Support 没有接管发言或投票，且任何玩家的投票输入都不包含其他玩家尚未公布的票。
+
+## 真实单日混合局
+
+2026-08-07 使用 `deepseek-v4-flash` 完成首局真实 `max_days=1` 混合对局。固定身份中1、2、3号为狼人，7号为预言家；4号首夜死亡。八名存活玩家各完成一次发言和一次同时投票，共16次模型决策。最终1号以5票被放逐，7号获得3票，对局按运行保护正常结束。
+
+- 15/16 次结构化决策成功。
+- 1次发言在一次格式修复后仍失败，成功使用中性发言 fallback。
+- 总输入 52686 token，总输出 8961 token。
+- 累计模型延迟 155938 ms。
+- 没有非法投票、越权事件引用或 Engine 中断。
+
+该局证明了九座位隔离 Runtime、动态 PlayerView、真实 AgentScope 调用、同时投票和 Engine 死亡链能够共同工作，也暴露了两个后续问题：完整快照与任务观察存在重复信息，导致投票输入增长到约四千 token；狼人阵营虽然形成了协同话术，却反复使用“白天起跳的预言家为何没有在前一夜被刀”这一时间因果错误。前者需要上下文压缩，后者将作为 M2-2 证据账本、时间线和认知检查的明确回归案例。
+
+针对5号发言的结构化失败，调用追踪现已补充逐次尝试记录。每次尝试区分 `generation` 与 `schema_repair` 阶段，记录成功状态、延迟、可获得的 token 和脱敏失败分类，例如 `missing_structured_output`、`schema_validation`、`empty_response` 或 `request_exception`。系统仍不保存失败原文或隐藏思维链，格式修复上限仍为一次。

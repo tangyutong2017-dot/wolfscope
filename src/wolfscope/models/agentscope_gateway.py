@@ -16,6 +16,7 @@ from wolfscope.agents.schemas import AgentDecisionInput, DecisionTask
 
 from .config import DeepSeekModelConfig
 from .gateway import (
+    ModelAttemptRecord,
     ModelCallRecord,
     ModelCallResult,
     ModelGatewayError,
@@ -84,8 +85,11 @@ class AgentScopeModelGateway:
         self.messages.append(tuple(messages))
         started = perf_counter()
         last_error: Exception | None = None
+        attempt_records: list[ModelAttemptRecord] = []
         attempts = config.schema_repair_attempts + 1
         for attempt in range(attempts):
+            attempt_started = perf_counter()
+            stage = "generation" if attempt == 0 else "schema_repair"
             call_messages = list(messages)
             if attempt:
                 call_messages.append(
@@ -105,8 +109,27 @@ class AgentScopeModelGateway:
                 value = output_schema.model_validate(response.content)
             except (ValidationError, RuntimeError, ValueError) as error:
                 last_error = error
+                attempt_records.append(
+                    ModelAttemptRecord(
+                        attempt_index=attempt + 1,
+                        stage=stage,
+                        success=False,
+                        latency_ms=self._elapsed_ms(attempt_started),
+                        failure_reason=self._failure_reason(error),
+                    ),
+                )
                 continue
             except Exception as error:
+                failure_reason = "request_exception"
+                attempt_records.append(
+                    ModelAttemptRecord(
+                        attempt_index=attempt + 1,
+                        stage=stage,
+                        success=False,
+                        latency_ms=self._elapsed_ms(attempt_started),
+                        failure_reason=failure_reason,
+                    ),
+                )
                 record = self._record(
                     player=player,
                     task=task,
@@ -116,10 +139,23 @@ class AgentScopeModelGateway:
                     success=False,
                     retry_count=0,
                     error_type="request_error",
+                    failure_stage=stage,
+                    failure_reason=failure_reason,
+                    attempts=tuple(attempt_records),
                 )
                 self.records.append(record)
                 raise ModelGatewayError("AgentScope model request failed", record) from error
 
+            usage = self._usage(response)
+            attempt_records.append(
+                ModelAttemptRecord(
+                    attempt_index=attempt + 1,
+                    stage=stage,
+                    success=True,
+                    latency_ms=self._elapsed_ms(attempt_started),
+                    token_usage=usage,
+                ),
+            )
             record = self._record(
                 player=player,
                 task=task,
@@ -128,6 +164,7 @@ class AgentScopeModelGateway:
                 started=started,
                 success=True,
                 retry_count=attempt,
+                attempts=tuple(attempt_records),
             )
             self.records.append(record)
             return ModelCallResult(value=value, record=record)
@@ -141,6 +178,9 @@ class AgentScopeModelGateway:
             success=False,
             retry_count=attempts - 1,
             error_type="structured_output",
+            failure_stage=attempt_records[-1].stage,
+            failure_reason=attempt_records[-1].failure_reason,
+            attempts=tuple(attempt_records),
         )
         self.records.append(record)
         raise ModelGatewayError("AgentScope structured output failed", record) from last_error
@@ -169,8 +209,11 @@ class AgentScopeModelGateway:
         success: bool,
         retry_count: int,
         error_type: str | None = None,
+        failure_stage: str | None = None,
+        failure_reason: str | None = None,
+        attempts: tuple[ModelAttemptRecord, ...] = (),
     ) -> ModelCallRecord:
-        usage = getattr(response, "usage", None)
+        usage = self._usage(response)
         return ModelCallRecord(
             call_id=len(self.records) + 1,
             player=player,
@@ -180,9 +223,34 @@ class AgentScopeModelGateway:
             success=success,
             latency_ms=max(0, round((perf_counter() - started) * 1000)),
             retry_count=retry_count,
-            token_usage=TokenUsage(
-                input_tokens=getattr(usage, "input_tokens", 0),
-                output_tokens=getattr(usage, "output_tokens", 0),
-            ),
+            token_usage=usage,
             error_type=error_type,
+            failure_stage=failure_stage,
+            failure_reason=failure_reason,
+            attempts=attempts,
         )
+
+    @staticmethod
+    def _usage(response: Any) -> TokenUsage:
+        usage = getattr(response, "usage", None)
+        return TokenUsage(
+            input_tokens=getattr(usage, "input_tokens", 0),
+            output_tokens=getattr(usage, "output_tokens", 0),
+        )
+
+    @staticmethod
+    def _elapsed_ms(started: float) -> int:
+        return max(0, round((perf_counter() - started) * 1000))
+
+    @staticmethod
+    def _failure_reason(error: Exception) -> str:
+        if isinstance(error, ValidationError):
+            return "schema_validation"
+        if isinstance(error, ValueError) and not isinstance(error, RuntimeError):
+            return "value_validation"
+        message = str(error).lower()
+        if "failed to generate structured output" in message:
+            return "missing_structured_output"
+        if "completed response" in message or "empty" in message:
+            return "empty_response"
+        return "structured_output_runtime"

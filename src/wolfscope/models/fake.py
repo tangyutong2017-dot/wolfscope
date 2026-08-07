@@ -12,6 +12,7 @@ from wolfscope.agents.schemas import AgentDecisionInput, DecisionTask
 
 from .config import DeepSeekModelConfig
 from .gateway import (
+    ModelAttemptRecord,
     ModelCallRecord,
     ModelCallResult,
     ModelGatewayError,
@@ -72,10 +73,34 @@ class FakeModelGateway:
                 **base,
                 success=False,
                 error_type="schema_validation",
+                failure_stage="generation",
+                failure_reason="schema_validation",
+                attempts=(
+                    ModelAttemptRecord(
+                        attempt_index=1,
+                        stage="generation",
+                        success=False,
+                        latency_ms=response.latency_ms,
+                        token_usage=usage,
+                        failure_reason="schema_validation",
+                    ),
+                ),
             )
             self.records.append(record)
             raise ModelGatewayError("fake structured output failed validation", record) from error
-        record = ModelCallRecord(**base, success=True)
+        record = ModelCallRecord(
+            **base,
+            success=True,
+            attempts=(
+                ModelAttemptRecord(
+                    attempt_index=1,
+                    stage="generation",
+                    success=True,
+                    latency_ms=response.latency_ms,
+                    token_usage=usage,
+                ),
+            ),
+        )
         self.records.append(record)
         return ModelCallResult(value=value, record=record)
 

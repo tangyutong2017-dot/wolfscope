@@ -18,6 +18,15 @@ class TokenUsage(StrictModel):
     output_tokens: int = 0
 
 
+class ModelAttemptRecord(StrictModel):
+    attempt_index: int
+    stage: str
+    success: bool
+    latency_ms: int
+    token_usage: TokenUsage = Field(default_factory=TokenUsage)
+    failure_reason: str | None = None
+
+
 class ModelCallRecord(StrictModel):
     call_id: int
     player: Seat
@@ -31,6 +40,10 @@ class ModelCallRecord(StrictModel):
     token_usage: TokenUsage = Field(default_factory=TokenUsage)
     error_type: str | None = None
     invalid_target: Seat | None = None
+    invalid_event_ids: tuple[int, ...] = ()
+    failure_stage: str | None = None
+    failure_reason: str | None = None
+    attempts: tuple[ModelAttemptRecord, ...] = ()
 
 
 TModel = TypeVar("TModel", bound=BaseModel)

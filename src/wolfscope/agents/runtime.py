@@ -74,21 +74,45 @@ class PlayerRuntime:
             raise
         if not isinstance(result.value, output_schema):
             raise TypeError("ModelGateway returned a value outside the requested schema")
-        if isinstance(result.value, VoteDecision):
+        decision = result.value
+        visible_event_ids = {
+            event.event_id for event in decision_input.player_view.visible_events
+        }
+        submitted_event_ids = tuple(getattr(decision, "event_ids", ()))
+        invalid_event_ids = tuple(
+            event_id
+            for event_id in submitted_event_ids
+            if event_id not in visible_event_ids
+        )
+        record = result.record
+        if invalid_event_ids:
+            decision = decision.model_copy(
+                update={
+                    "event_ids": tuple(
+                        event_id
+                        for event_id in submitted_event_ids
+                        if event_id in visible_event_ids
+                    ),
+                },
+            )
+            record = record.model_copy(
+                update={"invalid_event_ids": invalid_event_ids},
+            )
+        if isinstance(decision, VoteDecision):
             observation = decision_input.observation
             if not isinstance(observation, VoteTaskObservation):
                 raise TypeError("VoteDecision requires VoteTaskObservation")
             if (
-                result.value.target is not None
-                and result.value.target not in observation.candidates
+                decision.target is not None
+                and decision.target not in observation.candidates
             ):
                 self.call_records.append(
-                    result.record.model_copy(
+                    record.model_copy(
                         update={
                             "success": False,
                             "fallback_used": True,
                             "error_type": "illegal_target",
-                            "invalid_target": result.value.target,
+                            "invalid_target": decision.target,
                         },
                     ),
                 )
@@ -101,9 +125,9 @@ class PlayerRuntime:
                         "reason": "模型选择了非法候选人，本轮确定性改为弃票。",
                     },
                 )
-        self.call_records.append(result.record)
+        self.call_records.append(record)
         self.last_view_revision = view.view_revision
-        return result.value
+        return decision
 
 
 class PlayerRuntimeRegistry:

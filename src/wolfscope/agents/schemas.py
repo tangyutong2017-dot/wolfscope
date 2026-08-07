@@ -102,8 +102,7 @@ class SpeechDecision(StrictModel):
     speech: str | None = None
     intent: str = Field(min_length=1)
     confidence: Probability
-    evidence_ids: tuple[str, ...] = ()
-    strategy_ids: tuple[str, ...] = ()
+    event_ids: tuple[int, ...] = ()
 
     @model_validator(mode="after")
     def action_payload_is_coherent(self) -> SpeechDecision:
@@ -119,5 +118,4 @@ class VoteDecision(StrictModel):
     target: Seat | None
     confidence: Probability
     reason: str = Field(min_length=1)
-    evidence_ids: tuple[str, ...] = ()
-    strategy_ids: tuple[str, ...] = ()
+    event_ids: tuple[int, ...] = ()

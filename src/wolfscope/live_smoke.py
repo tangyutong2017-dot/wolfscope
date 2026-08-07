@@ -7,6 +7,8 @@ import asyncio
 import json
 
 from wolfscope.agents.runtime import PlayerRuntime
+from wolfscope.agents.hybrid import HybridProvider
+from wolfscope.agents.runtime import PlayerRuntimeRegistry
 from wolfscope.agents.schemas import (
     AgentDecisionInput,
     DecisionTask,
@@ -16,11 +18,13 @@ from wolfscope.agents.schemas import (
     VoteDecision,
     VoteTaskObservation,
 )
+from wolfscope.agents.support import DeterministicSupportProvider
 from wolfscope.contracts import Visibility
 from wolfscope.game import GameState, PlayerState
 from wolfscope.game.config import STANDARD_9_RULES
 from wolfscope.game.day import ExileVoteRound
 from wolfscope.game.events import EventLog
+from wolfscope.game.engine import GameEngine
 from wolfscope.game.types import Phase
 from wolfscope.models.agentscope_gateway import AgentScopeModelGateway
 from wolfscope.models.config import ModelProfile, model_config_for
@@ -126,14 +130,82 @@ async def run_vote() -> dict:
     }
 
 
+async def run_hybrid_day() -> dict:
+    config = model_config_for(ModelProfile.TEST)
+    state = GameState(
+        seed=42,
+        players=[
+            PlayerState(seat=seat, role=role)
+            for seat, role in enumerate(STANDARD_9_RULES.roles, start=1)
+        ],
+    )
+    events = EventLog()
+    runtimes = PlayerRuntimeRegistry.create(
+        config,
+        lambda _seat: AgentScopeModelGateway.from_environment(config),
+    )
+    provider = HybridProvider(
+        view_builder=PlayerViewBuilder(state, events),
+        runtimes=runtimes,
+        support=DeterministicSupportProvider(),
+    )
+    result = await GameEngine(
+        state,
+        provider,
+        events,
+        max_days=1,
+        game_id="m2-hybrid-flash-day-1",
+    ).run()
+    records = [
+        record
+        for seat in runtimes.seats
+        for record in runtimes.get(seat).call_records
+    ]
+    return {
+        "game_id": result.game_id,
+        "status": result.status.value,
+        "winner": result.winner.value if result.winner else None,
+        "win_reason": result.win_reason.value if result.win_reason else None,
+        "final_alive": list(result.final_alive),
+        "speeches": [
+            {"seat": event.actor, "content": event.content}
+            for event in result.events
+            if event.event_type == "day_speech"
+        ],
+        "votes": next(
+            (
+                event.data.get("votes", [])
+                for event in result.events
+                if event.event_type == "exile_votes"
+            ),
+            [],
+        ),
+        "trace_summary": {
+            "calls": len(records),
+            "successful": sum(record.success for record in records),
+            "fallbacks": sum(record.fallback_used for record in records),
+            "input_tokens": sum(
+                record.token_usage.input_tokens for record in records
+            ),
+            "output_tokens": sum(
+                record.token_usage.output_tokens for record in records
+            ),
+            "latency_ms": sum(record.latency_ms for record in records),
+        },
+        "traces": [record.model_dump(mode="json") for record in records],
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="WolfScope opt-in live smoke")
-    parser.add_argument("scenario", choices=("speech", "vote"))
+    parser.add_argument("scenario", choices=("speech", "vote", "hybrid-day"))
     args = parser.parse_args()
     if args.scenario == "speech":
         print(json.dumps(asyncio.run(run_speech()), ensure_ascii=False, indent=2))
     elif args.scenario == "vote":
         print(json.dumps(asyncio.run(run_vote()), ensure_ascii=False, indent=2))
+    elif args.scenario == "hybrid-day":
+        print(json.dumps(asyncio.run(run_hybrid_day()), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

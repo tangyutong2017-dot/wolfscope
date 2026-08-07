@@ -405,6 +405,7 @@ wolfscope/
 - [x] M2-1b：建立九个座位隔离的 PlayerRuntime、玩家视图归属校验和模型调用追踪
 - [x] M2-1c（离线部分）：实现 AgentScope DeepSeek Gateway、授权 Prompt 渲染、一次格式修复与显式安全降级
 - [x] M2-1c：接入 AgentScope 与 DeepSeek Flash，完成发言和放逐投票的真实模型冒烟测试
+- [x] M2-1d：收紧玩家本地事件引用，建立临时 Support Policy，并以 Fake Gateway 跑通单日完整混合局
 - [ ] 九个独立 AgentScope 玩家
 - [ ] 感知层和证据账本
 - [ ] 信念状态与启发式身份概率
@@ -418,6 +419,8 @@ wolfscope/
 完成标准：Agent 能引用结构化证据进行决策，行动合法，私有信息边界测试通过，并产生完整可审计 Replay。
 
 M2 模型策略固定为：自动化测试默认使用 Fake Gateway；M2-1 真实接口开发和冒烟测试使用 `deepseek-v4-flash`；正式对局九名玩家统一使用 `deepseek-v4-pro`。单局内不按角色、阶段或任务动态路由模型，以减少实验混杂变量。API 密钥只从运行环境注入，不进入配置对象、日志或 Replay。
+
+Provider 定位固定为：`ScriptedProvider` 永久服务于确定性规则回归，不进入正式 LLM 对局；`HybridProvider` 和 `DeterministicSupportProvider` 只是 M2 渐进接入脚手架；所有主观行动迁移完成后，正式路径收敛为完整 `AgentScopeProvider`。
 
 ### M3：评测、消融与作品集交付
 

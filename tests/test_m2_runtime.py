@@ -102,7 +102,7 @@ class ModelConfigTests(unittest.TestCase):
             config.model_name = "changed"  # type: ignore[misc]
 
 
-class DecisionSchemaTests(unittest.TestCase):
+class DecisionSchemaTests(unittest.IsolatedAsyncioTestCase):
     def test_public_summary_is_derived_from_player_view(self) -> None:
         decision_input = speech_input()
         self.assertEqual(decision_input.public_summary.alive_seats, tuple(range(1, 10)))
@@ -150,9 +150,32 @@ class DecisionSchemaTests(unittest.TestCase):
             target=7,
             confidence=0.7,
             reason="更相信1号的查验",
-            evidence_ids=("1",),
+            event_ids=(1,),
         )
         self.assertEqual(decision.reason, "更相信1号的查验")
+
+    async def test_invalid_local_event_references_are_removed_and_traced(self) -> None:
+        gateway = FakeModelGateway(
+            [
+                {
+                    "action": "speak",
+                    "speech": "引用当前可见事件",
+                    "intent": "测试引用",
+                    "confidence": 0.5,
+                    "event_ids": [1, 99],
+                },
+            ],
+        )
+        runtime = PlayerRuntime(4, model_config_for(ModelProfile.TEST), gateway)
+
+        decision = await runtime.decide(
+            task=DecisionTask.SPEECH,
+            decision_input=speech_input(),
+            output_schema=SpeechDecision,
+        )
+
+        self.assertEqual(decision.event_ids, (1,))
+        self.assertEqual(runtime.call_records[0].invalid_event_ids, (99,))
 
 
 class FakeGatewayAndRuntimeTests(unittest.IsolatedAsyncioTestCase):
@@ -199,6 +222,10 @@ class FakeGatewayAndRuntimeTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertFalse(runtime.call_records[0].success)
         self.assertEqual(runtime.call_records[0].error_type, "schema_validation")
+        self.assertEqual(
+            runtime.call_records[0].attempts[0].failure_reason,
+            "schema_validation",
+        )
 
     async def test_explicit_safe_fallback_keeps_public_turn_running(self) -> None:
         gateway = FakeModelGateway([{"action": "speak", "speech": "缺少字段"}])

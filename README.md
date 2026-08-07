@@ -76,7 +76,7 @@ wolfscope-m1 good-win-seed-42 --output-dir replays --overwrite
 python -m unittest discover -s tests
 ```
 
-当前包含 98 项自动化测试：79 项 M1 测试覆盖规则内核、PlayerView 信息隔离、完整循环、第一版缺陷回归、ScriptedProvider 和 Replay 确定性；19 项 M2-1 测试覆盖模型配置、结构化决策、AgentScope 消息适配、格式修复、安全降级、投票候选校验、调用追踪和九玩家运行时隔离。
+当前包含 101 项自动化测试：79 项 M1 测试覆盖规则内核、PlayerView 信息隔离、完整循环、第一版缺陷回归、ScriptedProvider 和 Replay 确定性；22 项 M2-1 测试覆盖模型配置、结构化决策、AgentScope 消息适配、格式修复、安全降级、本地事件引用、投票候选校验、混合单日完整局和九玩家运行时隔离。
 
 ## 项目文档
 
@@ -90,4 +90,4 @@ python -m unittest discover -s tests
 
 ## 当前阶段
 
-M1 已完成并提交。M2-1 已用 Fake Gateway 零成本验证九玩家隔离、发言/投票结构化接口，并完成 AgentScope DeepSeek Gateway、一次格式修复、安全降级和调用追踪；Flash 单玩家发言与投票冒烟均已通过，下一步是混合 Provider。正式实验中的九名玩家统一使用 DeepSeek Pro，不做动态模型路由。
+M1 已完成并提交。M2-1 的 Flash 单玩家冒烟、Fake Gateway 单日局和16次真实 Flash 决策的单日混合局均已跑通。`ScriptedProvider` 只保留为 M1 确定性回归工具；未接入 Agent 的行动暂由无策略的 `DeterministicSupportProvider` 承担，并将随 M2 推进逐项退出。正式实验中的九名玩家统一使用 DeepSeek Pro，不做动态模型路由。

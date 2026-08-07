@@ -79,7 +79,9 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.value.action, "speak")
 
     async def test_retries_once_with_schema_repair_instruction(self) -> None:
-        model = StubStructuredModel([RuntimeError("bad structure"), valid_speech()])
+        model = StubStructuredModel(
+            [RuntimeError("Failed to generate structured output for model."), valid_speech()],
+        )
         gateway = AgentScopeModelGateway(model)
 
         result = await gateway.structured_call(
@@ -94,6 +96,13 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
         repair_prompt = model.calls[1][0][-1].get_text_content()
         self.assertIn("未通过结构化校验", repair_prompt)
         self.assertEqual(result.record.retry_count, 1)
+        self.assertEqual(len(result.record.attempts), 2)
+        self.assertEqual(
+            result.record.attempts[0].failure_reason,
+            "missing_structured_output",
+        )
+        self.assertEqual(result.record.attempts[1].stage, "schema_repair")
+        self.assertTrue(result.record.attempts[1].success)
 
     async def test_exhausted_repair_is_auditable(self) -> None:
         model = StubStructuredModel(
@@ -113,6 +122,12 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(raised.exception.record.success)
         self.assertEqual(raised.exception.record.retry_count, 1)
         self.assertEqual(raised.exception.record.error_type, "structured_output")
+        self.assertEqual(raised.exception.record.failure_stage, "schema_repair")
+        self.assertEqual(
+            raised.exception.record.failure_reason,
+            "structured_output_runtime",
+        )
+        self.assertEqual(len(raised.exception.record.attempts), 2)
 
     async def test_request_failure_is_auditable_without_schema_retry(self) -> None:
         model = StubStructuredModel([OSError("network unavailable")])
@@ -129,6 +144,9 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(len(model.calls), 1)
         self.assertEqual(raised.exception.record.error_type, "request_error")
+        self.assertEqual(raised.exception.record.failure_stage, "generation")
+        self.assertEqual(raised.exception.record.failure_reason, "request_exception")
+        self.assertEqual(len(raised.exception.record.attempts), 1)
         self.assertFalse(raised.exception.record.success)
 
     async def test_task_must_match_observation(self) -> None:
