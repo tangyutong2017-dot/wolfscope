@@ -7,7 +7,13 @@ from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
-from wolfscope.contracts import PlayerView, Probability, Seat, StrictModel
+from wolfscope.contracts import (
+    OwnRoleState,
+    PlayerView,
+    Probability,
+    Seat,
+    StrictModel,
+)
 from wolfscope.cognition.context import EvidenceContext
 from wolfscope.cognition.brief import DecisionBrief
 from wolfscope.game.day import (
@@ -15,6 +21,7 @@ from wolfscope.game.day import (
     ExileVoteObservation,
     ExileVoteRound,
 )
+from wolfscope.game.types import Phase, RoleType
 
 
 class DecisionTask(StrEnum):
@@ -42,6 +49,33 @@ class PublicGameSummary(StrictModel):
                 (player.seat for player in view.players if player.is_sheriff),
                 None,
             ),
+        )
+
+
+class PlayerContext(StrictModel):
+    seat: Seat
+    ruleset: str
+    day: int = Field(ge=0)
+    phase: Phase
+    own_role: RoleType
+    own_role_state: OwnRoleState
+    alive_seats: tuple[Seat, ...]
+    dead_seats: tuple[Seat, ...]
+    sheriff: Seat | None
+
+    @classmethod
+    def from_view(cls, view: PlayerView) -> PlayerContext:
+        summary = PublicGameSummary.from_view(view)
+        return cls(
+            seat=view.viewer_seat,
+            ruleset=view.ruleset,
+            day=view.day,
+            phase=view.phase,
+            own_role=view.own_role,
+            own_role_state=view.own_role_state,
+            alive_seats=summary.alive_seats,
+            dead_seats=summary.dead_seats,
+            sheriff=summary.sheriff,
         )
 
 

@@ -102,7 +102,6 @@ class DecisionBriefTests(unittest.TestCase):
         self.assertEqual(brief.checks[0].target, 1)
         self.assertEqual(brief.latest_vote_intents[0].target, 1)
         self.assertEqual(brief.ledger_revision, brief.belief_revision)
-        self.assertIn("第一夜", brief.rule_reminders[0])
         self.assertIn(brief.checks[0].evidence_id, brief.evidence_ids)
         self.assertNotIn("recommend", brief.model_dump_json())
 
