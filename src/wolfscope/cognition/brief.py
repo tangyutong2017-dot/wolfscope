@@ -57,6 +57,7 @@ class DecisionBrief(StrictModel):
     task: str = Field(default="vote", pattern="^vote$")
     ledger_revision: int = Field(ge=0)
     belief_revision: int = Field(ge=0)
+    rule_reminders: tuple[str, ...] = ()
     candidates: tuple[CandidateBrief, ...]
     role_claims: tuple[RoleClaimBrief, ...] = ()
     checks: tuple[CheckBrief, ...] = ()
@@ -86,9 +87,32 @@ class DecisionBrief(StrictModel):
             raise ValueError("DecisionBrief cannot reference another player's evidence")
         return self
 
+    @property
+    def evidence_ids(self) -> tuple[str, ...]:
+        values = [
+            evidence_id
+            for candidate in self.candidates
+            for evidence_id in candidate.supporting_evidence_ids
+        ]
+        values.extend(claim.evidence_id for claim in self.role_claims)
+        values.extend(check.evidence_id for check in self.checks)
+        values.extend(intent.evidence_id for intent in self.latest_vote_intents)
+        values.extend(
+            evidence_id
+            for conflict in self.conflicts
+            for evidence_id in conflict.evidence_ids
+        )
+        return tuple(dict.fromkeys(values))
+
 
 class DecisionBriefBuilder:
     """Build a compact semantic index without making a voting recommendation."""
+
+    RULE_REMINDERS = (
+        "预言家每晚（包括第一夜）查验一名玩家，第一天可以合法报告首夜查验结果。",
+        "公开查验只是对应发言者的声明；只有预言家本人收到的私人查验才是确认事实。",
+        "狼人可以虚假声明身份和伪造查验，是否可信仍需结合对跳、发言与票型判断。",
+    )
 
     def build(
         self,
@@ -157,6 +181,7 @@ class DecisionBriefBuilder:
             day=day,
             ledger_revision=ledger.revision,
             belief_revision=belief.revision,
+            rule_reminders=self.RULE_REMINDERS,
             candidates=candidate_items,
             role_claims=tuple(role_claims),
             checks=tuple(checks),

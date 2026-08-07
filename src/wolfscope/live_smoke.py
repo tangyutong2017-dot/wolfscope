@@ -280,6 +280,13 @@ async def run_hybrid_day() -> dict:
                 record.token_usage.output_tokens for record in records
             ),
             "latency_ms": sum(record.latency_ms for record in records),
+            "brief_evidence_references": sum(
+                len(record.accepted_brief_evidence_ids) for record in records
+            ),
+            "context_only_evidence_references": sum(
+                len(record.accepted_context_only_evidence_ids)
+                for record in records
+            ),
         },
         "extraction_summary": {
             "calls": len(extraction_records),

@@ -124,8 +124,26 @@ class PlayerRuntime:
             for evidence_id in submitted_evidence_ids
             if evidence_id in valid_evidence_ids
         )
+        brief = decision_input.decision_brief
+        brief_evidence_ids = set(brief.evidence_ids if brief is not None else ())
+        accepted_brief_evidence_ids = tuple(
+            evidence_id
+            for evidence_id in accepted_evidence_ids
+            if evidence_id in brief_evidence_ids
+        )
+        accepted_context_only_evidence_ids = tuple(
+            evidence_id
+            for evidence_id in accepted_evidence_ids
+            if evidence_id not in brief_evidence_ids
+        )
         record = record.model_copy(
-            update={"accepted_evidence_ids": accepted_evidence_ids},
+            update={
+                "accepted_evidence_ids": accepted_evidence_ids,
+                "accepted_brief_evidence_ids": accepted_brief_evidence_ids,
+                "accepted_context_only_evidence_ids": (
+                    accepted_context_only_evidence_ids
+                ),
+            },
         )
         if isinstance(decision, VoteDecision):
             observation = decision_input.observation

@@ -166,6 +166,10 @@ class EvidenceContextTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(decision.evidence_ids, (valid_id,))
         self.assertEqual(runtime.call_records[0].invalid_evidence_ids, ("p9-e999",))
         self.assertEqual(runtime.call_records[0].accepted_evidence_ids, (valid_id,))
+        self.assertEqual(
+            runtime.call_records[0].accepted_context_only_evidence_ids,
+            (valid_id,),
+        )
 
 
 if __name__ == "__main__":

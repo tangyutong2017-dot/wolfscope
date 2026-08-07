@@ -43,6 +43,8 @@ class ModelCallRecord(StrictModel):
     invalid_event_ids: tuple[int, ...] = ()
     invalid_evidence_ids: tuple[str, ...] = ()
     accepted_evidence_ids: tuple[str, ...] = ()
+    accepted_brief_evidence_ids: tuple[str, ...] = ()
+    accepted_context_only_evidence_ids: tuple[str, ...] = ()
     failure_stage: str | None = None
     failure_reason: str | None = None
     attempts: tuple[ModelAttemptRecord, ...] = ()
