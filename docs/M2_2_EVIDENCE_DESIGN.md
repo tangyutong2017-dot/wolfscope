@@ -73,3 +73,5 @@ AgentScope 公共语义提取器已经实现并接入 HybridProvider 的可选�
 语义数据集当前定位为真实失败回归样本库，不主动扩充为完整人工 Gold，也不使用非穷尽标注计算正式 Precision/Recall。只有发现明确解析错误或 Evidence 影响决策时才增补案例；一对一匹配器、Forbidden 检查和盲测运行器作为回归诊断基础设施保留。这样优先推进 Agent 对 Evidence 的实际使用，避免在 M2 阶段投入过多人工标注和 API token。
 
 `EvidenceContextBuilder` 已把玩家本地 Ledger 转为一次决策使用的紧凑快照：硬事实和规则推导全部保留，身份/查验 Claim 永久保留，其他软 Claim 只保留最近30条，RawSpeech 不重复进入快照。HybridProvider 在每次决策前完成 Ledger 同步并将快照写入 `AgentDecisionInput`。模型可在 `evidence_ids` 中引用实际使用的本地证据；Runtime 会删除不存在或属于其他座位的引用并写入审计 Trace。Prompt 明确区分 VERIFIED、RULE_DERIVATION 与 CLAIMED，避免把公开声明当作真相。
+
+为避免 PlayerView、任务发言和 EvidenceContext 三重重复，完整 PlayerView 只保留在 Python 信任边界内用于权限与引用校验；发送给模型的是精简决策投影，不再序列化 `visible_events`。当前任务原文由 observation 提供，历史硬事实和语义索引由 EvidenceContext 提供。Trace 同时记录 `accepted_evidence_ids` 与 `invalid_evidence_ids`，可直接统计模型实际使用结构化证据的比例和伪造引用。

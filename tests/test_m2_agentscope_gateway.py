@@ -71,6 +71,7 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
 
         prompt = model.calls[0][0][1].get_text_content()
         self.assertIn("1号公开发言", prompt)
+        self.assertNotIn('"visible_events"', prompt)
         self.assertNotIn("隐藏身份信息", prompt)
         self.assertNotIn("god_fact", prompt)
         self.assertEqual(result.record.token_usage.input_tokens, 240)
