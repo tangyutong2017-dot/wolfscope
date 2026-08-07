@@ -38,6 +38,7 @@ Claim 字段必须遵守以下契约，所有 kind 和枚举值必须使用列�
 - vote_intent: kind, summary, supporting_text, target, intent, conditional, condition；intent 只能是 vote/avoid。
 - vote_recommendation: kind, summary, supporting_text, target, conditional, condition。
 他人转述不能变成当前 speaker 自己的查验。
+stance_claim 只表示当前 speaker 本人对 target 的明确态度；不得把他人态度的转述归给当前 speaker，也不得提取“如果……才相信/怀疑……”等尚未成立的条件性态度。
 supporting_text 必须逐字取自对应发言原文，不得改写。
 “好人身份”只表示阵营，应提取 alignment_claim(alignment=good)，不得提取为普通村民身份；
 只有明确说“普通村民/平民/村民”时，才能提取 role_claim(role=villager)。

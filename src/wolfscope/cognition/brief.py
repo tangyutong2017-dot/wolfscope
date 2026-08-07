@@ -13,6 +13,8 @@ from .claims import (
     ClaimAlignment,
     ClaimPolarity,
     RoleClaim,
+    StanceClaim,
+    StanceType,
     VoteIntentClaim,
     VoteIntentType,
 )
@@ -51,6 +53,13 @@ class VoteIntentBrief(StrictModel):
     evidence_id: str
 
 
+class StanceBrief(StrictModel):
+    speaker: Seat
+    target: Seat
+    stance: StanceType
+    evidence_id: str
+
+
 class DecisionBrief(StrictModel):
     owner: Seat
     day: int = Field(ge=1)
@@ -63,6 +72,7 @@ class DecisionBrief(StrictModel):
     checks: tuple[CheckBrief, ...] = ()
     conflicts: tuple[BeliefConflict, ...] = ()
     latest_vote_intents: tuple[VoteIntentBrief, ...] = ()
+    latest_stances: tuple[StanceBrief, ...] = Field(default=(), max_length=24)
 
     @model_validator(mode="after")
     def references_are_local_and_candidates_unique(self):
@@ -78,6 +88,7 @@ class DecisionBrief(StrictModel):
         evidence_ids.extend(claim.evidence_id for claim in self.role_claims)
         evidence_ids.extend(check.evidence_id for check in self.checks)
         evidence_ids.extend(intent.evidence_id for intent in self.latest_vote_intents)
+        evidence_ids.extend(stance.evidence_id for stance in self.latest_stances)
         evidence_ids.extend(
             evidence_id
             for conflict in self.conflicts
@@ -97,6 +108,7 @@ class DecisionBrief(StrictModel):
         values.extend(claim.evidence_id for claim in self.role_claims)
         values.extend(check.evidence_id for check in self.checks)
         values.extend(intent.evidence_id for intent in self.latest_vote_intents)
+        values.extend(stance.evidence_id for stance in self.latest_stances)
         values.extend(
             evidence_id
             for conflict in self.conflicts
@@ -136,6 +148,8 @@ class DecisionBriefBuilder:
         role_claims: list[RoleClaimBrief] = []
         checks: list[CheckBrief] = []
         latest_intents: dict[int, tuple[int, VoteIntentBrief]] = {}
+        latest_stances: dict[tuple[int, int], tuple[int, StanceBrief]] = {}
+        candidate_set = set(candidates)
         for record in ledger.records:
             content = record.content
             if not isinstance(content, PublicClaimEvidence):
@@ -175,6 +189,25 @@ class DecisionBriefBuilder:
                         evidence_id=record.evidence_id,
                     ),
                 )
+            elif (
+                isinstance(claim, StanceClaim)
+                and record.occurred_at.day == day
+                and claim.target in candidate_set
+            ):
+                latest_stances[(content.speaker, claim.target)] = (
+                    record.known_order,
+                    StanceBrief(
+                        speaker=content.speaker,
+                        target=claim.target,
+                        stance=claim.stance,
+                        evidence_id=record.evidence_id,
+                    ),
+                )
+
+        selected_stances = sorted(
+            latest_stances.values(),
+            key=lambda pair: pair[0],
+        )[-24:]
 
         return DecisionBrief(
             owner=ledger.owner,
@@ -190,4 +223,5 @@ class DecisionBriefBuilder:
                 item[1]
                 for item in sorted(latest_intents.values(), key=lambda pair: pair[0])
             ),
+            latest_stances=tuple(item[1] for item in selected_stances),
         )

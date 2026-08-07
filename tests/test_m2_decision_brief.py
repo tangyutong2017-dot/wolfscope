@@ -16,6 +16,8 @@ from wolfscope.cognition.claims import (
     ClaimAlignment,
     ClaimPolarity,
     RoleClaim,
+    StanceClaim,
+    StanceType,
     VoteIntentClaim,
     VoteIntentType,
 )
@@ -129,6 +131,41 @@ class DecisionBriefTests(unittest.TestCase):
 
         self.assertEqual(len(brief.latest_vote_intents), 1)
         self.assertEqual(brief.latest_vote_intents[0].target, 7)
+
+    def test_keeps_latest_current_day_stance_toward_candidates(self) -> None:
+        events = EventLog()
+        old = events.emit(
+            day=1, phase=Phase.DAY_SPEECH, event_type="day_speech",
+            visibility=Visibility.PUBLIC, actor=8, content="我先相信7号",
+        )
+        latest = events.emit(
+            day=1, phase=Phase.DAY_PK_SPEECH, event_type="pk_speech",
+            visibility=Visibility.PUBLIC, actor=8,
+            content="现在我不信7号，但支持9号的分析",
+        )
+        ledger = EvidenceLedger(owner=4)
+        ledger.sync(PlayerViewBuilder(game_state(), events).build(4))
+        ledger.ingest_public_claims(
+            event=old, speaker=8,
+            claims=(StanceClaim(target=7, stance=StanceType.TRUST, summary="8号相信7号", supporting_text="我先相信7号"),),
+            extractor_version="test-old",
+        )
+        ledger.ingest_public_claims(
+            event=latest, speaker=8,
+            claims=(
+                StanceClaim(target=7, stance=StanceType.DISTRUST, summary="8号不信7号", supporting_text="现在我不信7号"),
+                StanceClaim(target=9, stance=StanceType.SUPPORT, summary="8号支持9号", supporting_text="支持9号的分析"),
+            ),
+            extractor_version="test-latest",
+        )
+
+        brief = DecisionBriefBuilder().build(ledger, day=1, candidates=(1, 7))
+
+        self.assertEqual(len(brief.latest_stances), 1)
+        self.assertEqual(brief.latest_stances[0].speaker, 8)
+        self.assertEqual(brief.latest_stances[0].target, 7)
+        self.assertEqual(brief.latest_stances[0].stance, StanceType.DISTRUST)
+        self.assertIn(brief.latest_stances[0].evidence_id, brief.evidence_ids)
 
 
 class DecisionBriefTraceTests(unittest.IsolatedAsyncioTestCase):
