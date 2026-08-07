@@ -409,6 +409,7 @@ wolfscope/
 - [x] M2-2a：建立九玩家隔离的追加式 EvidenceLedger、确定性 Engine 事件映射和规则必然推导
 - [x] M2-2b（离线部分）：实现六类严格公共 Claim、批量提取协议、不可变公共缓存与玩家账本分发
 - [x] M2-2b：接入只读公开文本的 AgentScope 语义提取器，并在 HybridProvider 决策前同步 EvidencePipeline
+- [x] M2-2b 回归保障：逐 Claim 容错、字段级诊断和真实失败样本库；完整语义 Gold 与正式 Precision/Recall 延后到确有评测需求时建设
 - [ ] 九个独立 AgentScope 玩家
 - [ ] 感知层和证据账本
 - [ ] 信念状态与启发式身份概率

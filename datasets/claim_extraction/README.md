@@ -1,6 +1,6 @@
-# 公共发言 Claim 标注集
+# 公共发言 Claim 失败回归样本库
 
-`gold_v1.jsonl` 每行是一条独立公开发言。当前首批样本均为 `draft`，需要人工复核后才能改为 `reviewed` 并纳入正式指标。
+`gold_v1.jsonl` 保留早期命名，每行是一条独立公开发言。当前样本用于保存真实对局中发现的解析边界和失败案例，不追求穷尽长发言中的所有合法 Claim，也不作为正式 Precision、Recall 或 F1 数据集。
 
 ## 标注原则
 
@@ -9,7 +9,11 @@
 - `expected_claims` 是必须提取的语义；`forbidden_claims` 是特别需要防止的高风险误提取模式。
 - `summary` 不属于 Gold 标注，因为不同措辞不应影响语义评分。
 - 不确定时宁可不标，并在 `note` 中说明歧义。
-- `review_status=draft` 表示尚未形成正式 Gold；两人或两轮审核一致后改为 `reviewed`。
+- `review_status=reviewed` 只表示目标回归点已经人工确认，不代表该长发言完成了穷尽式 Gold 标注。
+
+## 当前定位
+
+只有出现 Schema 拒绝、明显误提取或漏提取、转述归属错误、投票目标错误，或错误 Evidence 实际影响 Agent 决策时，才新增回归样本。匹配器与 API 运行器保留作诊断工具，但当前总体指标不用于宣称模型质量；未来若建立穷尽式冻结测试集，再恢复正式 Precision/Recall 评测。
 
 ## 验证
 

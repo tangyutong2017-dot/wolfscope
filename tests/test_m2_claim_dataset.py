@@ -13,11 +13,11 @@ DATASET = Path("datasets/claim_extraction/gold_v1.jsonl")
 
 
 class ClaimDatasetTests(unittest.TestCase):
-    def test_first_draft_dataset_is_valid(self) -> None:
+    def test_first_reviewed_dataset_is_valid(self) -> None:
         cases = load_dataset(DATASET)
 
         self.assertEqual(len(cases), 10)
-        self.assertTrue(all(case.review_status == "draft" for case in cases))
+        self.assertTrue(all(case.review_status == "reviewed" for case in cases))
         self.assertEqual(len({case.case_id for case in cases}), 10)
 
     def test_supporting_text_must_come_from_speech(self) -> None:

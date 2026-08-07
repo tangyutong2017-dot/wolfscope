@@ -162,7 +162,10 @@ class EvidencePipeline:
                     failure_reason="extractor_failure",
                 )
             else:
-                accepted, local_rejections = _validated_claims(item, output.claims)
+                accepted, local_rejections = validate_extracted_claims(
+                    item,
+                    output.claims,
+                )
                 rejection_reasons = output.rejection_reasons + local_rejections
                 status = (
                     ExtractionStatus.PARTIAL
@@ -182,7 +185,7 @@ class EvidencePipeline:
             self.cache.put(annotation)
 
 
-def _validated_claims(
+def validate_extracted_claims(
     item: SpeechExtractionItem,
     claims: tuple[PublicClaim, ...],
 ) -> tuple[tuple[PublicClaim, ...], tuple[str, ...]]:
