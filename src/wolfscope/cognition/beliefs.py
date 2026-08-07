@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
@@ -11,8 +11,14 @@ from wolfscope.contracts import Probability, Seat, StrictModel
 from wolfscope.game.config import STANDARD_9_RULES
 from wolfscope.game.types import Camp, RoleType
 
-from .claims import ClaimPolarity, RoleClaim
+from .claims import (
+    ClaimPolarity,
+    RoleClaim,
+    VoteIntentClaim,
+    VoteIntentType,
+)
 from .evidence import (
+    ActualVoteFact,
     OwnRoleFact,
     PublicClaimEvidence,
     SeerCheckFact,
@@ -87,13 +93,62 @@ class ClaimedRole(StrictModel):
     role: RoleType
     polarity: ClaimPolarity
     evidence_id: str
+    day: int = Field(ge=0)
+    known_order: int = Field(ge=1)
 
 
-class BeliefConflict(StrictModel):
+class UniqueRoleCounterclaimConflict(StrictModel):
     kind: Literal["unique_role_counterclaim"] = "unique_role_counterclaim"
     role: Literal["seer", "witch", "hunter"]
     seats: tuple[Seat, ...] = Field(min_length=2)
     evidence_ids: tuple[str, ...] = Field(min_length=2)
+
+
+class SelfRoleClaimConflict(StrictModel):
+    kind: Literal["self_role_claim_conflict"] = "self_role_claim_conflict"
+    seat: Seat
+    earlier_role: RoleType
+    earlier_polarity: ClaimPolarity
+    later_role: RoleType
+    later_polarity: ClaimPolarity
+    evidence_ids: tuple[str, str]
+
+
+class VoteBehaviorConflict(StrictModel):
+    kind: Literal["vote_behavior_conflict"] = "vote_behavior_conflict"
+    seat: Seat
+    day: int = Field(ge=1)
+    declared_target: Seat
+    declared_intent: VoteIntentType
+    actual_target: Seat | None
+    reason: Literal["declared_vote_changed", "declared_avoid_violated"]
+    evidence_ids: tuple[str, str]
+
+
+BeliefConflict = Annotated[
+    UniqueRoleCounterclaimConflict
+    | SelfRoleClaimConflict
+    | VoteBehaviorConflict,
+    Field(discriminator="kind"),
+]
+
+
+class RecordedVoteIntent(StrictModel):
+    speaker: Seat
+    target: Seat
+    intent: VoteIntentType
+    conditional: bool
+    day: int = Field(ge=1)
+    known_order: int = Field(ge=1)
+    evidence_id: str
+
+
+class RecordedActualVote(StrictModel):
+    voter: Seat
+    target: Seat | None
+    day: int = Field(ge=1)
+    known_order: int = Field(ge=1)
+    evidence_id: str
 
 
 class BeliefState(StrictModel):
@@ -136,6 +191,8 @@ class BeliefStateBuilder:
         good_constraints: set[int] = set()
         hard_support: dict[int, list[str]] = defaultdict(list)
         claimed_roles: list[ClaimedRole] = []
+        vote_intents: list[RecordedVoteIntent] = []
+        actual_votes: list[RecordedActualVote] = []
 
         for record in ledger.records:
             content = record.content
@@ -161,6 +218,33 @@ class BeliefStateBuilder:
                         subject=content.claim.subject,
                         role=content.claim.role,
                         polarity=content.claim.polarity,
+                        evidence_id=record.evidence_id,
+                        day=record.occurred_at.day,
+                        known_order=record.known_order,
+                    ),
+                )
+            elif (
+                isinstance(content, PublicClaimEvidence)
+                and isinstance(content.claim, VoteIntentClaim)
+            ):
+                vote_intents.append(
+                    RecordedVoteIntent(
+                        speaker=content.speaker,
+                        target=content.claim.target,
+                        intent=content.claim.intent,
+                        conditional=content.claim.conditional,
+                        day=record.occurred_at.day,
+                        known_order=record.known_order,
+                        evidence_id=record.evidence_id,
+                    ),
+                )
+            elif isinstance(content, ActualVoteFact) and content.vote_type == "exile":
+                actual_votes.append(
+                    RecordedActualVote(
+                        voter=content.voter,
+                        target=content.target,
+                        day=record.occurred_at.day,
+                        known_order=record.known_order,
                         evidence_id=record.evidence_id,
                     ),
                 )
@@ -198,7 +282,7 @@ class BeliefStateBuilder:
                 ),
             )
 
-        conflicts = self._conflicts(claimed_roles)
+        conflicts = self._conflicts(claimed_roles, vote_intents, actual_votes)
         return BeliefState(
             owner=ledger.owner,
             revision=ledger.revision,
@@ -210,6 +294,8 @@ class BeliefStateBuilder:
     def _conflicts(
         self,
         claims: list[ClaimedRole],
+        vote_intents: list[RecordedVoteIntent],
+        actual_votes: list[RecordedActualVote],
     ) -> tuple[BeliefConflict, ...]:
         by_role: dict[RoleType, dict[int, str]] = defaultdict(dict)
         for claim in claims:
@@ -225,10 +311,94 @@ class BeliefStateBuilder:
                 continue
             seats = tuple(sorted(claimants))
             conflicts.append(
-                BeliefConflict(
+                UniqueRoleCounterclaimConflict(
                     role=role.value,
                     seats=seats,
                     evidence_ids=tuple(claimants[seat] for seat in seats),
                 ),
             )
+        conflicts.extend(self._self_role_conflicts(claims))
+        conflicts.extend(self._vote_behavior_conflicts(vote_intents, actual_votes))
         return tuple(conflicts)
+
+    @staticmethod
+    def _self_role_conflicts(
+        claims: list[ClaimedRole],
+    ) -> list[SelfRoleClaimConflict]:
+        history: dict[int, list[ClaimedRole]] = defaultdict(list)
+        conflicts: list[SelfRoleClaimConflict] = []
+        for later in sorted(claims, key=lambda claim: claim.known_order):
+            if later.speaker != later.subject:
+                continue
+            earlier = next(
+                (
+                    candidate
+                    for candidate in reversed(history[later.speaker])
+                    if (
+                        candidate.role == later.role
+                        and candidate.polarity != later.polarity
+                    )
+                    or (
+                        candidate.role != later.role
+                        and candidate.polarity is ClaimPolarity.ASSERT
+                        and later.polarity is ClaimPolarity.ASSERT
+                    )
+                ),
+                None,
+            )
+            if earlier is not None:
+                conflicts.append(
+                    SelfRoleClaimConflict(
+                        seat=later.speaker,
+                        earlier_role=earlier.role,
+                        earlier_polarity=earlier.polarity,
+                        later_role=later.role,
+                        later_polarity=later.polarity,
+                        evidence_ids=(earlier.evidence_id, later.evidence_id),
+                    ),
+                )
+            history[later.speaker].append(later)
+        return conflicts
+
+    @staticmethod
+    def _vote_behavior_conflicts(
+        intents: list[RecordedVoteIntent],
+        actual_votes: list[RecordedActualVote],
+    ) -> list[VoteBehaviorConflict]:
+        conflicts: list[VoteBehaviorConflict] = []
+        for actual in sorted(actual_votes, key=lambda vote: vote.known_order):
+            matching = [
+                intent
+                for intent in intents
+                if intent.speaker == actual.voter
+                and intent.day == actual.day
+                and not intent.conditional
+                and intent.known_order < actual.known_order
+            ]
+            if not matching:
+                continue
+            declared = max(matching, key=lambda intent: intent.known_order)
+            reason = None
+            if (
+                declared.intent is VoteIntentType.VOTE
+                and actual.target != declared.target
+            ):
+                reason = "declared_vote_changed"
+            elif (
+                declared.intent is VoteIntentType.AVOID
+                and actual.target == declared.target
+            ):
+                reason = "declared_avoid_violated"
+            if reason is not None:
+                conflicts.append(
+                    VoteBehaviorConflict(
+                        seat=actual.voter,
+                        day=actual.day,
+                        declared_target=declared.target,
+                        declared_intent=declared.intent,
+                        actual_target=actual.target,
+                        reason=reason,
+                        evidence_ids=(declared.evidence_id, actual.evidence_id),
+                    ),
+                )
+        return conflicts
