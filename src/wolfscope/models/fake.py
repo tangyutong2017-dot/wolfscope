@@ -39,6 +39,7 @@ class FakeModelGateway:
         )
         self.records: list[ModelCallRecord] = []
         self.inputs: list[AgentDecisionInput] = []
+        self.configs: list[DeepSeekModelConfig] = []
 
     async def structured_call(
         self,
@@ -53,6 +54,7 @@ class FakeModelGateway:
             raise RuntimeError("FakeModelGateway has no queued response")
         response = self._responses.popleft()
         self.inputs.append(decision_input.model_copy(deep=True))
+        self.configs.append(config.model_copy(deep=True))
         usage = TokenUsage(
             input_tokens=response.input_tokens,
             output_tokens=response.output_tokens,

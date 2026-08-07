@@ -84,7 +84,7 @@ def vote_input(seat: int = 4) -> AgentDecisionInput:
     )
 
 
-class ModelConfigTests(unittest.TestCase):
+class ModelConfigTests(unittest.IsolatedAsyncioTestCase):
     def test_test_profile_is_flash_and_production_is_pro(self) -> None:
         self.assertEqual(
             model_config_for(ModelProfile.TEST).model_name,
@@ -100,6 +100,29 @@ class ModelConfigTests(unittest.TestCase):
         self.assertFalse(hasattr(config, "api_key"))
         with self.assertRaises(ValidationError):
             config.model_name = "changed"  # type: ignore[misc]
+
+    async def test_vote_uses_larger_output_budget_without_changing_speech(self) -> None:
+        gateway = FakeModelGateway(
+            [
+                SpeechDecision(action="speak", speech="发言", intent="测试", confidence=0.5),
+                VoteDecision(target=1, confidence=0.5, reason="测试"),
+            ],
+        )
+        runtime = PlayerRuntime(4, model_config_for(ModelProfile.TEST), gateway)
+
+        await runtime.decide(
+            task=DecisionTask.SPEECH,
+            decision_input=speech_input(),
+            output_schema=SpeechDecision,
+        )
+        await runtime.decide(
+            task=DecisionTask.VOTE,
+            decision_input=vote_input(),
+            output_schema=VoteDecision,
+        )
+
+        self.assertEqual(gateway.configs[0].max_tokens, 1200)
+        self.assertEqual(gateway.configs[1].max_tokens, 2000)
 
 
 class DecisionSchemaTests(unittest.IsolatedAsyncioTestCase):

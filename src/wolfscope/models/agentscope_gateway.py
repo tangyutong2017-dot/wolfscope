@@ -105,6 +105,7 @@ class AgentScopeModelGateway:
                 response = await self._model.generate_structured_output(
                     call_messages,
                     output_schema,
+                    max_tokens=config.max_tokens,
                 )
                 value = output_schema.model_validate(response.content)
             except (ValidationError, RuntimeError, ValueError) as error:

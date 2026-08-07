@@ -52,12 +52,19 @@ class PlayerRuntime:
         if view.view_revision < self.last_view_revision:
             raise ValueError("PlayerRuntime cannot process a stale PlayerView revision")
         try:
+            call_config = (
+                self.model_config.model_copy(
+                    update={"max_tokens": self.model_config.vote_max_tokens},
+                )
+                if task is DecisionTask.VOTE
+                else self.model_config
+            )
             result = await self.gateway.structured_call(
                 player=self.seat,
                 task=task,
                 decision_input=decision_input,
                 output_schema=output_schema,
-                config=self.model_config,
+                config=call_config,
             )
         except ModelGatewayError as error:
             record = error.record

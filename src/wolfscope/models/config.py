@@ -19,6 +19,7 @@ class DeepSeekModelConfig(BaseModel):
     thinking_enabled: bool = True
     temperature: float = Field(default=0.3, ge=0.0, le=2.0)
     max_tokens: int = Field(default=1200, ge=1)
+    vote_max_tokens: int = Field(default=2000, ge=1)
     request_timeout_seconds: float = Field(default=60.0, gt=0.0)
     request_max_retries: int = Field(default=2, ge=0, le=5)
     schema_repair_attempts: int = Field(default=1, ge=0, le=1)
