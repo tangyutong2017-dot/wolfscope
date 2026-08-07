@@ -38,6 +38,9 @@ class StrategyBrief(StrictModel):
         "sheriff_campaign",
         "sheriff_withdrawal",
         "sheriff_vote",
+        "wolf_target",
+        "seer_target",
+        "witch_action",
     ]
     role: RoleType
     role_goal: str = Field(min_length=1)
@@ -123,6 +126,9 @@ class StrategyBuilder:
             "sheriff_campaign",
             "sheriff_withdrawal",
             "sheriff_vote",
+            "wolf_target",
+            "seer_target",
+            "witch_action",
         ],
         situation: DecisionBrief | None = None,
     ) -> StrategyBrief:
@@ -133,6 +139,9 @@ class StrategyBuilder:
             "sheriff_campaign": ("present_sheriff_case", "清楚说明竞选立场和后续组织信息的方法。"),
             "sheriff_withdrawal": ("reassess_candidacy", "听完全部竞选发言后重新评估继续竞选是否有利。"),
             "sheriff_vote": ("choose_sheriff_auditably", "依据竞选发言选择更适合组织白天信息的候选人。"),
+            "wolf_target": ("advance_wolf_win_path", "结合屠神或屠民路线选择合法刀口，并允许战术性自刀。"),
+            "seer_target": ("maximize_check_value", "优先查验能显著缩小身份空间或影响白天归票的玩家。"),
+            "witch_action": ("manage_witch_resources", "结合刀口、存活结构和药物价值选择救、毒或保留。"),
         }[task]
         task_priority = StrategyPriority(
             priority_id=priority_id,

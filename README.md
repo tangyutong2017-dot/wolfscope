@@ -76,7 +76,7 @@ wolfscope-m1 good-win-seed-42 --output-dir replays --overwrite
 python -m unittest discover -s tests
 ```
 
-当前包含 162 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent 和混合单日局，以及 EvidenceLedger、确定性映射、规则推导、严格公共 Claim、逐 Claim 容错解析、失败回归样本、紧凑 EvidenceContext、本地 Evidence/Strategy 引用审计、确定性角色先验与硬证据更新、ID 隔离和失败降级。
+当前包含 163 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent、夜间角色 Agent 和混合单日局，以及 EvidenceLedger、确定性映射、规则推导、严格公共 Claim、逐 Claim 容错解析、失败回归样本、紧凑 EvidenceContext、本地 Evidence/Strategy 引用审计、确定性角色先验与硬证据更新、ID 隔离和失败降级。
 
 ## 项目文档
 
@@ -87,8 +87,9 @@ python -m unittest discover -s tests
 - [第一版缺陷回归矩阵](docs/V1_REGRESSION_MATRIX.md)
 - [M2-1 认知玩家接入设计](docs/M2_1_DESIGN.md)
 - [M2-2 EvidenceLedger 设计](docs/M2_2_EVIDENCE_DESIGN.md)
+- [M2-5 行动 Agent 化](docs/M2_5_ACTION_AGENTIZATION.md)
 - [架构决策记录](docs/decisions/)
 
 ## 当前阶段
 
-M1 已完成并提交。M2 的 Flash 单玩家冒烟、Fake Gateway 单日局、真实 Flash 单日混合局和完整警长竞选均已跑通。警长验证包含上警、竞选发言、同时退水共25次模型调用，并由 Engine 合法选出警长。`ScriptedProvider` 只保留为 M1 确定性回归工具；尚未接入 Agent 的夜间和死亡行动暂由无策略的 `DeterministicSupportProvider` 承担，并将随 M2 推进逐项退出。正式实验中的九名玩家统一使用 DeepSeek Pro，不做动态模型路由。
+M1 已完成并提交。M2 的 Flash 单玩家冒烟、Fake Gateway 单日局、真实 Flash 单日混合局、完整警长竞选和夜间角色行动均已跑通。警长验证包含上警、竞选发言、同时退水共25次模型调用；夜间验证完成狼刀、预言家查验和女巫用药3次结构化决策。`ScriptedProvider` 只保留为 M1 确定性回归工具；尚未接入 Agent 的死亡技能和遗言暂由无策略的 `DeterministicSupportProvider` 承担，并将继续退出正式路径。正式实验中的九名玩家统一使用 DeepSeek Pro，不做动态模型路由。

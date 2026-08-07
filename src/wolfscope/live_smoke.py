@@ -37,6 +37,7 @@ from wolfscope.game.config import STANDARD_9_RULES
 from wolfscope.game.day import ExileVoteRound
 from wolfscope.game.events import EventLog
 from wolfscope.game.engine import GameEngine
+from wolfscope.game.night import NightEngine
 from wolfscope.game.sheriff import SheriffElectionEngine
 from wolfscope.game.types import Phase
 from wolfscope.models.agentscope_gateway import AgentScopeModelGateway
@@ -422,6 +423,69 @@ async def run_sheriff_election() -> dict:
     }
 
 
+async def run_night_actions() -> dict:
+    config = model_config_for(ModelProfile.TEST)
+    state = GameState(
+        seed=42,
+        players=[
+            PlayerState(seat=seat, role=role)
+            for seat, role in enumerate(STANDARD_9_RULES.roles, start=1)
+        ],
+    )
+    events = EventLog()
+    runtimes = PlayerRuntimeRegistry.create(
+        config,
+        lambda _seat: AgentScopeModelGateway.from_environment(config),
+    )
+    provider = HybridProvider(
+        view_builder=PlayerViewBuilder(state, events),
+        runtimes=runtimes,
+        support=DeterministicSupportProvider(),
+    )
+    result = await NightEngine(state, events).run(provider)
+    records = [
+        record
+        for seat in runtimes.seats
+        for record in runtimes.get(seat).call_records
+    ]
+    return {
+        "scenario": "night-actions",
+        "model": config.model_name,
+        "actions": {
+            "wolf_target": result.actions.wolf_target,
+            "seer_target": result.actions.seer_target,
+            "witch_action": result.actions.witch_action.action.value,
+            "witch_target": result.actions.witch_action.target,
+        },
+        "pending_deaths": [
+            {
+                "seat": death.seat,
+                "causes": sorted(cause.value for cause in death.causes),
+            }
+            for death in result.pending_deaths
+        ],
+        "trace_summary": {
+            "calls": len(records),
+            "successful": sum(record.success for record in records),
+            "fallbacks": sum(record.fallback_used for record in records),
+            "input_tokens": sum(
+                record.token_usage.input_tokens for record in records
+            ),
+            "output_tokens": sum(
+                record.token_usage.output_tokens for record in records
+            ),
+            "latency_ms": sum(record.latency_ms for record in records),
+            "strategy_references": sum(
+                len(record.accepted_strategy_ids) for record in records
+            ),
+            "invalid_strategy_references": sum(
+                len(record.invalid_strategy_ids) for record in records
+            ),
+        },
+        "traces": [record.model_dump(mode="json") for record in records],
+    }
+
+
 async def run_claim_extraction() -> dict:
     config = model_config_for(ModelProfile.TEST)
     extractor = AgentScopePublicClaimExtractor.from_environment(config)
@@ -466,6 +530,7 @@ def main() -> None:
             "vote",
             "hybrid-day",
             "sheriff-election",
+            "night-actions",
             "claim-extraction",
         ),
     )
@@ -500,6 +565,8 @@ def main() -> None:
         result = asyncio.run(run_claim_extraction())
     elif args.scenario == "sheriff-election":
         result = asyncio.run(run_sheriff_election())
+    elif args.scenario == "night-actions":
+        result = asyncio.run(run_night_actions())
     _emit_result(
         result,
         output=args.output,

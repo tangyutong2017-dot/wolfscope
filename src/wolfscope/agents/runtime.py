@@ -20,8 +20,14 @@ from .schemas import (
     DecisionTask,
     SheriffVoteDecision,
     SheriffVoteTaskObservation,
+    SeerTargetDecision,
+    SeerTargetTaskObservation,
     VoteDecision,
     VoteTaskObservation,
+    WitchActionDecision,
+    WitchActionTaskObservation,
+    WolfTargetDecision,
+    WolfTargetTaskObservation,
 )
 
 
@@ -184,6 +190,52 @@ class PlayerRuntime:
                 "accepted_strategy_ids": accepted_strategy_ids,
             },
         )
+        legal_target = True
+        if isinstance(decision, WolfTargetDecision):
+            observation = decision_input.observation
+            if not isinstance(observation, WolfTargetTaskObservation):
+                raise TypeError("WolfTargetDecision requires wolf observation")
+            legal_target = decision.target in observation.eligible_targets
+        elif isinstance(decision, SeerTargetDecision):
+            observation = decision_input.observation
+            if not isinstance(observation, SeerTargetTaskObservation):
+                raise TypeError("SeerTargetDecision requires seer observation")
+            legal_target = decision.target in observation.eligible_targets
+        elif isinstance(decision, WitchActionDecision):
+            observation = decision_input.observation
+            if not isinstance(observation, WitchActionTaskObservation):
+                raise TypeError("WitchActionDecision requires witch observation")
+            legal_target = (
+                decision.action == "pass"
+                or (
+                    decision.action == "save"
+                    and observation.antidote_available
+                    and observation.can_save
+                    and decision.target == observation.night_victim
+                )
+                or (
+                    decision.action == "poison"
+                    and observation.poison_available
+                    and decision.target in observation.poison_targets
+                )
+            )
+        if not legal_target:
+            self.call_records.append(
+                record.model_copy(
+                    update={
+                        "success": False,
+                        "fallback_used": True,
+                        "error_type": "illegal_target",
+                        "invalid_target": decision.target,
+                    },
+                ),
+            )
+            self.last_view_revision = view.view_revision
+            return safe_fallback_decision(
+                task=task,
+                decision_input=decision_input,
+                output_schema=output_schema,
+            )
         if isinstance(decision, (VoteDecision, SheriffVoteDecision)):
             observation = decision_input.observation
             if not isinstance(

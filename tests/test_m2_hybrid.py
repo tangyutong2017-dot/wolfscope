@@ -80,7 +80,35 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
 
         def gateway_factory(seat: int) -> FakeModelGateway:
             vote_target = 8 if seat == 9 else 9
-            gateway = FakeModelGateway(
+            responses = []
+            if seat == 1:
+                responses.append(
+                    {
+                        "action": "wolf_target",
+                        "target": 4,
+                        "confidence": 0.7,
+                        "reason": "验证狼人夜间决策",
+                    },
+                )
+            if seat == 7:
+                responses.append(
+                    {
+                        "action": "seer_target",
+                        "target": 1,
+                        "confidence": 0.7,
+                        "reason": "验证预言家夜间决策",
+                    },
+                )
+            if seat == 8:
+                responses.append(
+                    {
+                        "action": "pass",
+                        "target": None,
+                        "confidence": 0.7,
+                        "reason": "验证女巫夜间决策",
+                    },
+                )
+            responses.extend(
                 [
                     {
                         "action": "sheriff_signup",
@@ -102,6 +130,7 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
                     },
                 ],
             )
+            gateway = FakeModelGateway(responses)
             gateways[seat] = gateway
             return gateway
 
@@ -142,8 +171,22 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(state.get_player(4).alive)
         self.assertFalse(state.get_player(9).alive)
         self.assertEqual(len(runtimes.get(4).call_records), 1)
-        for seat in (1, 2, 3, 5, 6, 7, 8, 9):
+        for seat in (2, 3, 5, 6, 9):
             self.assertEqual(len(runtimes.get(seat).call_records), 3)
+        for seat in (1, 7, 8):
+            self.assertEqual(len(runtimes.get(seat).call_records), 4)
+        self.assertNotIn(
+            "wolf_target",
+            {call[0] for call in support.calls},
+        )
+        self.assertNotIn(
+            "seer_target",
+            {call[0] for call in support.calls},
+        )
+        self.assertNotIn(
+            "witch_action",
+            {call[0] for call in support.calls},
+        )
         self.assertNotIn(
             "sheriff_signup",
             {call[0] for call in support.calls},
@@ -159,7 +202,7 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(claim_extractor.calls), 9)
         self.assertEqual(len(annotation_cache), 9)
         for seat in (1, 2, 3, 5, 6, 7, 8, 9):
-            vote_input = gateways[seat].inputs[2]
+            vote_input = gateways[seat].inputs[-1]
             self.assertIsNotNone(vote_input.evidence_context)
             self.assertEqual(vote_input.evidence_context.owner, seat)
             self.assertGreater(vote_input.evidence_context.ledger_revision, 0)

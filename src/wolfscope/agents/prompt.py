@@ -12,9 +12,12 @@ from wolfscope.agents.schemas import (
     SheriffSignupTaskObservation,
     SheriffVoteTaskObservation,
     SheriffWithdrawalTaskObservation,
+    SeerTargetTaskObservation,
     SpeechTaskObservation,
     VoteTaskObservation,
     VoteContextMode,
+    WitchActionTaskObservation,
+    WolfTargetTaskObservation,
 )
 
 
@@ -58,6 +61,9 @@ def render_decision_prompt(
         DecisionTask.SHERIFF_CAMPAIGN: "完成警长竞选发言，说明竞选立场和组织信息的方法。",
         DecisionTask.SHERIFF_WITHDRAWAL: "听完全部竞选发言后决定是否退水。",
         DecisionTask.SHERIFF_VOTE: "从 candidates 中选择警长；判断不足时可以弃票。",
+        DecisionTask.WOLF_TARGET: "代表当前存活狼队选择今晚唯一合法刀口；允许战术性自刀。",
+        DecisionTask.SEER_TARGET: "选择今晚的合法查验目标，不能查验自己或重复查验。",
+        DecisionTask.WITCH_ACTION: "根据今晚刀口和剩余药物选择过夜、救人或毒人。",
     }[task]
     payload = _model_payload(decision_input)
     rendered_payload = json.dumps(payload, ensure_ascii=False, indent=2)
@@ -109,6 +115,28 @@ def _model_payload(decision_input: AgentDecisionInput) -> dict:
             "candidates": observation.candidates,
             "campaign_speeches": observation.campaign_speeches,
             "withdrawn": observation.withdrawn,
+        }
+    elif isinstance(observation, WolfTargetTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "wolf_seats": observation.wolf_seats,
+            "eligible_targets": observation.eligible_targets,
+            "coordinator_rule": "当前 actor 是存活狼队中座位号最小者，代表狼队提交本夜唯一刀口。",
+        }
+    elif isinstance(observation, SeerTargetTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "checked_seats": observation.checked_seats,
+            "eligible_targets": observation.eligible_targets,
+        }
+    elif isinstance(observation, WitchActionTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "night_victim": observation.night_victim,
+            "antidote_available": observation.antidote_available,
+            "poison_available": observation.poison_available,
+            "can_save": observation.can_save,
+            "poison_targets": observation.poison_targets,
         }
     else:  # pragma: no cover - discriminated union protects this boundary
         raise TypeError("unsupported task observation")

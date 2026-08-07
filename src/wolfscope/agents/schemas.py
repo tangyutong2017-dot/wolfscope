@@ -28,6 +28,11 @@ from wolfscope.game.sheriff import (
     SheriffVoteObservation,
     SheriffWithdrawalObservation,
 )
+from wolfscope.game.night import (
+    SeerNightObservation,
+    WitchNightObservation,
+    WolfNightObservation,
+)
 from wolfscope.game.types import Phase, RoleType
 
 
@@ -38,6 +43,9 @@ class DecisionTask(StrEnum):
     SHERIFF_CAMPAIGN = "sheriff_campaign"
     SHERIFF_WITHDRAWAL = "sheriff_withdrawal"
     SHERIFF_VOTE = "sheriff_vote"
+    WOLF_TARGET = "wolf_target"
+    SEER_TARGET = "seer_target"
+    WITCH_ACTION = "witch_action"
 
 
 class VoteContextMode(StrEnum):
@@ -181,13 +189,67 @@ class SheriffVoteTaskObservation(StrictModel):
         )
 
 
+class WolfTargetTaskObservation(StrictModel):
+    task: Literal["wolf_target"] = "wolf_target"
+    actor: Seat
+    wolf_seats: tuple[Seat, ...]
+    eligible_targets: tuple[Seat, ...]
+
+    @classmethod
+    def from_domain(cls, observation: WolfNightObservation):
+        return cls(
+            actor=min(observation.wolf_seats),
+            wolf_seats=observation.wolf_seats,
+            eligible_targets=observation.eligible_targets,
+        )
+
+
+class SeerTargetTaskObservation(StrictModel):
+    task: Literal["seer_target"] = "seer_target"
+    actor: Seat
+    checked_seats: tuple[Seat, ...]
+    eligible_targets: tuple[Seat, ...]
+
+    @classmethod
+    def from_domain(cls, observation: SeerNightObservation):
+        return cls(
+            actor=observation.seer_seat,
+            checked_seats=observation.checked_seats,
+            eligible_targets=observation.eligible_targets,
+        )
+
+
+class WitchActionTaskObservation(StrictModel):
+    task: Literal["witch_action"] = "witch_action"
+    actor: Seat
+    night_victim: Seat | None
+    antidote_available: bool
+    poison_available: bool
+    can_save: bool
+    poison_targets: tuple[Seat, ...]
+
+    @classmethod
+    def from_domain(cls, observation: WitchNightObservation):
+        return cls(
+            actor=observation.witch_seat,
+            night_victim=observation.night_victim,
+            antidote_available=observation.antidote_available,
+            poison_available=observation.poison_available,
+            can_save=observation.can_save,
+            poison_targets=observation.poison_targets,
+        )
+
+
 TaskObservation = Annotated[
     SpeechTaskObservation
     | VoteTaskObservation
     | SheriffSignupTaskObservation
     | SheriffCampaignTaskObservation
     | SheriffWithdrawalTaskObservation
-    | SheriffVoteTaskObservation,
+    | SheriffVoteTaskObservation
+    | WolfTargetTaskObservation
+    | SeerTargetTaskObservation
+    | WitchActionTaskObservation,
     Field(discriminator="task"),
 ]
 
@@ -338,3 +400,41 @@ class SheriffVoteDecision(StrictModel):
     event_ids: tuple[int, ...] = ()
     evidence_ids: tuple[str, ...] = ()
     strategy_ids: tuple[str, ...] = ()
+
+
+class WolfTargetDecision(StrictModel):
+    action: Literal["wolf_target"] = "wolf_target"
+    target: Seat
+    confidence: Probability
+    reason: str = Field(min_length=1)
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
+
+
+class SeerTargetDecision(StrictModel):
+    action: Literal["seer_target"] = "seer_target"
+    target: Seat
+    confidence: Probability
+    reason: str = Field(min_length=1)
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
+
+
+class WitchActionDecision(StrictModel):
+    action: Literal["pass", "save", "poison"]
+    target: Seat | None = None
+    confidence: Probability
+    reason: str = Field(min_length=1)
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def target_matches_action(self):
+        if self.action == "pass" and self.target is not None:
+            raise ValueError("pass action cannot contain a target")
+        if self.action != "pass" and self.target is None:
+            raise ValueError("save and poison require a target")
+        return self

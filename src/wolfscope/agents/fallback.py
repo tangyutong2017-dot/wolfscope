@@ -6,7 +6,13 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from .schemas import AgentDecisionInput, DecisionTask
+from .schemas import (
+    AgentDecisionInput,
+    DecisionTask,
+    SeerTargetTaskObservation,
+    WitchActionTaskObservation,
+    WolfTargetTaskObservation,
+)
 
 
 TModel = TypeVar("TModel", bound=BaseModel)
@@ -61,6 +67,41 @@ def safe_fallback_decision(
             "action": "sheriff_vote",
             "target": None,
             "reason": "模型调用失败，本轮弃票。",
+            "confidence": 0.0,
+        }
+    elif task is DecisionTask.WOLF_TARGET:
+        observation = decision_input.observation
+        if not isinstance(observation, WolfTargetTaskObservation):
+            raise TypeError("wolf fallback requires wolf target observation")
+        non_wolves = [
+            target
+            for target in observation.eligible_targets
+            if target not in observation.wolf_seats
+        ]
+        payload = {
+            "action": "wolf_target",
+            "target": (non_wolves or list(observation.eligible_targets))[0],
+            "reason": "模型调用失败，使用确定性合法刀口。",
+            "confidence": 0.0,
+        }
+    elif task is DecisionTask.SEER_TARGET:
+        observation = decision_input.observation
+        if not isinstance(observation, SeerTargetTaskObservation):
+            raise TypeError("seer fallback requires seer target observation")
+        payload = {
+            "action": "seer_target",
+            "target": observation.eligible_targets[0],
+            "reason": "模型调用失败，使用确定性合法查验目标。",
+            "confidence": 0.0,
+        }
+    elif task is DecisionTask.WITCH_ACTION:
+        observation = decision_input.observation
+        if not isinstance(observation, WitchActionTaskObservation):
+            raise TypeError("witch fallback requires witch action observation")
+        payload = {
+            "action": "pass",
+            "target": None,
+            "reason": "模型调用失败，保留药物并安全过夜。",
             "confidence": 0.0,
         }
     else:  # pragma: no cover - protects future enum extensions

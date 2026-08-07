@@ -17,13 +17,20 @@ from wolfscope.agents.schemas import (
     SheriffVoteTaskObservation,
     SheriffWithdrawalDecision,
     SheriffWithdrawalTaskObservation,
+    SeerTargetDecision,
+    SeerTargetTaskObservation,
     SpeechDecision,
     SpeechTaskObservation,
     VoteDecision,
     VoteContextMode,
     VoteTaskObservation,
+    WitchActionDecision,
+    WitchActionTaskObservation,
+    WolfTargetDecision,
+    WolfTargetTaskObservation,
 )
 from wolfscope.game.day import DayTurnAction
+from wolfscope.game.night import WitchAction, WitchActionType
 from wolfscope.player_view import PlayerViewBuilder
 from wolfscope.cognition.context import EvidenceContextBuilder
 from wolfscope.cognition.brief import DecisionBriefBuilder
@@ -144,13 +151,49 @@ class HybridProvider:
         )
 
     async def choose_wolf_target(self, observation):
-        return await self.support.choose_wolf_target(observation)
+        task_observation = WolfTargetTaskObservation.from_domain(observation)
+        decision_input = await self._input(
+            task_observation.actor,
+            task_observation,
+        )
+        decision = await self.runtimes.get(task_observation.actor).decide(
+            task=DecisionTask.WOLF_TARGET,
+            decision_input=decision_input,
+            output_schema=WolfTargetDecision,
+            use_safe_fallback=True,
+        )
+        return decision.target
 
     async def choose_seer_target(self, observation):
-        return await self.support.choose_seer_target(observation)
+        task_observation = SeerTargetTaskObservation.from_domain(observation)
+        decision_input = await self._input(
+            task_observation.actor,
+            task_observation,
+        )
+        decision = await self.runtimes.get(task_observation.actor).decide(
+            task=DecisionTask.SEER_TARGET,
+            decision_input=decision_input,
+            output_schema=SeerTargetDecision,
+            use_safe_fallback=True,
+        )
+        return decision.target
 
     async def choose_witch_action(self, observation):
-        return await self.support.choose_witch_action(observation)
+        task_observation = WitchActionTaskObservation.from_domain(observation)
+        decision_input = await self._input(
+            task_observation.actor,
+            task_observation,
+        )
+        decision = await self.runtimes.get(task_observation.actor).decide(
+            task=DecisionTask.WITCH_ACTION,
+            decision_input=decision_input,
+            output_schema=WitchActionDecision,
+            use_safe_fallback=True,
+        )
+        return WitchAction(
+            action=WitchActionType(decision.action),
+            target=decision.target,
+        )
 
     async def choose_signup(self, observation):
         decision_input = await self._input(
