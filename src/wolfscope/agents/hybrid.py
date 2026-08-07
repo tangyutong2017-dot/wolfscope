@@ -9,6 +9,14 @@ from wolfscope.agents.schemas import (
     AgentDecisionInput,
     DecisionTask,
     PublicGameSummary,
+    SheriffCampaignDecision,
+    SheriffCampaignTaskObservation,
+    SheriffSignupDecision,
+    SheriffSignupTaskObservation,
+    SheriffVoteDecision,
+    SheriffVoteTaskObservation,
+    SheriffWithdrawalDecision,
+    SheriffWithdrawalTaskObservation,
     SpeechDecision,
     SpeechTaskObservation,
     VoteDecision,
@@ -145,16 +153,56 @@ class HybridProvider:
         return await self.support.choose_witch_action(observation)
 
     async def choose_signup(self, observation):
-        return await self.support.choose_signup(observation)
+        decision_input = await self._input(
+            observation.actor,
+            SheriffSignupTaskObservation.from_domain(observation),
+        )
+        decision = await self.runtimes.get(observation.actor).decide(
+            task=DecisionTask.SHERIFF_SIGNUP,
+            decision_input=decision_input,
+            output_schema=SheriffSignupDecision,
+            use_safe_fallback=True,
+        )
+        return decision.signup
 
     async def campaign_speech(self, observation):
-        return await self.support.campaign_speech(observation)
+        decision_input = await self._input(
+            observation.actor,
+            SheriffCampaignTaskObservation.from_domain(observation),
+        )
+        decision = await self.runtimes.get(observation.actor).decide(
+            task=DecisionTask.SHERIFF_CAMPAIGN,
+            decision_input=decision_input,
+            output_schema=SheriffCampaignDecision,
+            use_safe_fallback=True,
+        )
+        return decision.speech
 
     async def choose_withdrawal(self, observation):
-        return await self.support.choose_withdrawal(observation)
+        decision_input = await self._input(
+            observation.actor,
+            SheriffWithdrawalTaskObservation.from_domain(observation),
+        )
+        decision = await self.runtimes.get(observation.actor).decide(
+            task=DecisionTask.SHERIFF_WITHDRAWAL,
+            decision_input=decision_input,
+            output_schema=SheriffWithdrawalDecision,
+            use_safe_fallback=True,
+        )
+        return decision.withdraw
 
     async def choose_sheriff_vote(self, observation):
-        return await self.support.choose_sheriff_vote(observation)
+        decision_input = await self._input(
+            observation.voter,
+            SheriffVoteTaskObservation.from_domain(observation),
+        )
+        decision = await self.runtimes.get(observation.voter).decide(
+            task=DecisionTask.SHERIFF_VOTE,
+            decision_input=decision_input,
+            output_schema=SheriffVoteDecision,
+            use_safe_fallback=True,
+        )
+        return decision.target
 
     async def choose_speech_direction(self, observation):
         return await self.support.choose_speech_direction(observation)

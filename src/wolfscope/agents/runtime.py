@@ -18,6 +18,8 @@ from wolfscope.models.gateway import (
 from .schemas import (
     AgentDecisionInput,
     DecisionTask,
+    SheriffVoteDecision,
+    SheriffVoteTaskObservation,
     VoteDecision,
     VoteTaskObservation,
 )
@@ -182,10 +184,13 @@ class PlayerRuntime:
                 "accepted_strategy_ids": accepted_strategy_ids,
             },
         )
-        if isinstance(decision, VoteDecision):
+        if isinstance(decision, (VoteDecision, SheriffVoteDecision)):
             observation = decision_input.observation
-            if not isinstance(observation, VoteTaskObservation):
-                raise TypeError("VoteDecision requires VoteTaskObservation")
+            if not isinstance(
+                observation,
+                (VoteTaskObservation, SheriffVoteTaskObservation),
+            ):
+                raise TypeError("vote decision requires a vote observation")
             if (
                 decision.target is not None
                 and decision.target not in observation.candidates
@@ -201,13 +206,10 @@ class PlayerRuntime:
                     ),
                 )
                 self.last_view_revision = view.view_revision
-                return output_schema.model_validate(
-                    {
-                        "action": "vote",
-                        "target": None,
-                        "confidence": 0.0,
-                        "reason": "模型选择了非法候选人，本轮确定性改为弃票。",
-                    },
+                return safe_fallback_decision(
+                    task=task,
+                    decision_input=decision_input,
+                    output_schema=output_schema,
                 )
         self.call_records.append(record)
         self.last_view_revision = view.view_revision

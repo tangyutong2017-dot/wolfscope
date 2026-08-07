@@ -35,6 +35,34 @@ def safe_fallback_decision(
             "reason": "模型调用失败，本轮弃票。",
             "confidence": 0.0,
         }
+    elif task is DecisionTask.SHERIFF_SIGNUP:
+        payload = {
+            "action": "sheriff_signup",
+            "signup": False,
+            "reason": "模型调用失败，本轮不上警。",
+            "confidence": 0.0,
+        }
+    elif task is DecisionTask.SHERIFF_CAMPAIGN:
+        payload = {
+            "action": "sheriff_campaign",
+            "speech": f"{seat}号竞选警长，希望通过发言和票型整理公开信息。",
+            "intent": "模型调用失败后的最小竞选发言",
+            "confidence": 0.0,
+        }
+    elif task is DecisionTask.SHERIFF_WITHDRAWAL:
+        payload = {
+            "action": "sheriff_withdrawal",
+            "withdraw": False,
+            "reason": "模型调用失败，维持原竞选选择。",
+            "confidence": 0.0,
+        }
+    elif task is DecisionTask.SHERIFF_VOTE:
+        payload = {
+            "action": "sheriff_vote",
+            "target": None,
+            "reason": "模型调用失败，本轮弃票。",
+            "confidence": 0.0,
+        }
     else:  # pragma: no cover - protects future enum extensions
         raise ValueError(f"no safe fallback for task: {task}")
     return output_schema.model_validate(payload)

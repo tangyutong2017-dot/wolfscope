@@ -4,7 +4,7 @@
 
 M2-1 先验证一条最小但真实的认知决策链：Engine 产生玩家可见信息，`PlayerViewBuilder` 构造隔离视图，座位专属 `PlayerRuntime` 请求结构化决策，Engine 最终校验并执行行动。
 
-本阶段只接入两类公开决策：白天发言和放逐投票。夜间技能、警长竞选、自爆之外的死亡处理仍由现有 `ScriptedProvider` 驱动，等接口稳定后再逐项替换。
+首个切片接入白天发言和放逐投票；后续已将警长上警、竞选发言、同时退水和警下投票纳入同一座位隔离 Runtime。夜间技能和死亡处理继续逐项替换。
 
 ## 模型策略
 
@@ -73,6 +73,12 @@ EventLog 与 `PlayerViewBuilder` 继续充当信息流权威。本阶段不引�
 ## 过渡 Provider
 
 `ScriptedProvider` 继续专用于 M1 精确回归，不再作为 LLM 正式路径的依赖。M2 过渡期由 `HybridProvider` 将普通发言和放逐投票交给座位独立 Runtime，其余接口交给不包含狼人杀策略的 `DeterministicSupportProvider`。Support 只返回简单合法选择，随着 Agent 行动覆盖增加而逐项退出。
+
+## 警长阶段 Agent 化
+
+`HybridProvider` 已将 `sheriff_signup`、`sheriff_campaign`、`sheriff_withdrawal` 和 `sheriff_vote` 路由给各自座位的 Runtime。模型只收到当前 `PlayerView`、合法候选范围、当时已公开的竞选发言、Evidence 与粗粒度 Strategy；Engine 仍独占同时收集语义、随机发言起点、候选资格、计票和流警裁决。模型失败分别降级为不上警、最小竞选发言、维持候选资格和弃票。
+
+2026-08-07 的 Flash 定向验证共25次决策：9次上警、8次竞选发言、8次退水。23次成功；8号和9号竞选发言遇到请求异常后使用安全降级，不影响流程。8名候选人中7名同时退水，7号成为唯一候选人并合法当选。Trace 记录67次有效 Strategy 引用和1次被过滤的截断 Strategy ID。完整本地结果保存在忽略 Git 的 `replays/live/`，避免大 Trace 污染仓库。
 
 Fake Gateway 已完成一局 `max_days=1` 的完整集成验证：第一夜、无人竞选警长、首夜死亡公布、八名存活玩家发言、同时投票、放逐与猎人死亡链均由真实 Engine 推进。测试同时确认 Support 没有接管发言或投票，且任何玩家的投票输入都不包含其他玩家尚未公布的票。
 

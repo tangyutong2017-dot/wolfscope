@@ -8,6 +8,10 @@ from wolfscope.agents.schemas import (
     AgentDecisionInput,
     DecisionTask,
     PlayerContext,
+    SheriffCampaignTaskObservation,
+    SheriffSignupTaskObservation,
+    SheriffVoteTaskObservation,
+    SheriffWithdrawalTaskObservation,
     SpeechTaskObservation,
     VoteTaskObservation,
     VoteContextMode,
@@ -50,6 +54,10 @@ def render_decision_prompt(
             "从 candidates 中选择放逐目标。有合理怀疑对象时应正常投票；"
             "只有信息严重不足时才提交 target=null 弃票。"
         ),
+        DecisionTask.SHERIFF_SIGNUP: "决定是否参加第一天警长竞选。",
+        DecisionTask.SHERIFF_CAMPAIGN: "完成警长竞选发言，说明竞选立场和组织信息的方法。",
+        DecisionTask.SHERIFF_WITHDRAWAL: "听完全部竞选发言后决定是否退水。",
+        DecisionTask.SHERIFF_VOTE: "从 candidates 中选择警长；判断不足时可以弃票。",
     }[task]
     payload = _model_payload(decision_input)
     rendered_payload = json.dumps(payload, ensure_ascii=False, indent=2)
@@ -78,6 +86,30 @@ def _model_payload(decision_input: AgentDecisionInput) -> dict:
         }
         if decision_input.vote_context_mode is not VoteContextMode.COMPACT:
             task_context["speeches"] = observation.speeches
+    elif isinstance(observation, SheriffSignupTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "eligible_seats": observation.eligible_seats,
+        }
+    elif isinstance(observation, SheriffCampaignTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "candidates": observation.candidates,
+            "previous_speeches": observation.previous_speeches,
+        }
+    elif isinstance(observation, SheriffWithdrawalTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "candidates": observation.candidates,
+            "campaign_speeches": observation.campaign_speeches,
+        }
+    elif isinstance(observation, SheriffVoteTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "candidates": observation.candidates,
+            "campaign_speeches": observation.campaign_speeches,
+            "withdrawn": observation.withdrawn,
+        }
     else:  # pragma: no cover - discriminated union protects this boundary
         raise TypeError("unsupported task observation")
 

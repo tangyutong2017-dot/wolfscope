@@ -2,7 +2,7 @@
 
 WolfScope 是一个基于 AgentScope 的九人狼人杀多智能体博弈与评测项目。项目采用“确定性 Python 裁判 + 角色隔离的 Agent 决策”架构：游戏规则、真实身份、信息可见性和胜负判断由 Engine 掌握，LLM 只能根据自己的玩家视角提交结构化行动。
 
-M1 确定性游戏内核已经完成。无需调用 LLM，即可用固定 seed 和严格剧本运行完整九人局并生成上帝视角 JSON Replay。项目现已进入 M2；M2-1 已完成九玩家隔离、结构化决策和模型调用追踪骨架，并通过一次 DeepSeek Flash 发言冒烟测试。
+M1 确定性游戏内核已经完成。无需调用 LLM，即可用固定 seed 和严格剧本运行完整九人局并生成上帝视角 JSON Replay。项目现已进入 M2；九玩家隔离、Evidence、SituationBrief、粗粒度角色 Strategy、公开发言/放逐投票和警长竞选 Agent 决策链均已接入。
 
 ## 当前功能
 
@@ -76,7 +76,7 @@ wolfscope-m1 good-win-seed-42 --output-dir replays --overwrite
 python -m unittest discover -s tests
 ```
 
-当前包含 145 项自动化测试，覆盖确定性规则内核、AgentScope 决策和混合单日局，以及 EvidenceLedger、确定性映射、规则推导、严格公共 Claim、逐 Claim 容错解析、失败回归样本、紧凑 EvidenceContext、本地 Evidence 引用审计、确定性角色先验与硬证据更新、ID 隔离和失败降级。
+当前包含 162 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent 和混合单日局，以及 EvidenceLedger、确定性映射、规则推导、严格公共 Claim、逐 Claim 容错解析、失败回归样本、紧凑 EvidenceContext、本地 Evidence/Strategy 引用审计、确定性角色先验与硬证据更新、ID 隔离和失败降级。
 
 ## 项目文档
 
@@ -91,4 +91,4 @@ python -m unittest discover -s tests
 
 ## 当前阶段
 
-M1 已完成并提交。M2-1 的 Flash 单玩家冒烟、Fake Gateway 单日局和16次真实 Flash 决策的单日混合局均已跑通。`ScriptedProvider` 只保留为 M1 确定性回归工具；未接入 Agent 的行动暂由无策略的 `DeterministicSupportProvider` 承担，并将随 M2 推进逐项退出。正式实验中的九名玩家统一使用 DeepSeek Pro，不做动态模型路由。
+M1 已完成并提交。M2 的 Flash 单玩家冒烟、Fake Gateway 单日局、真实 Flash 单日混合局和完整警长竞选均已跑通。警长验证包含上警、竞选发言、同时退水共25次模型调用，并由 Engine 合法选出警长。`ScriptedProvider` 只保留为 M1 确定性回归工具；尚未接入 Agent 的夜间和死亡行动暂由无策略的 `DeterministicSupportProvider` 承担，并将随 M2 推进逐项退出。正式实验中的九名玩家统一使用 DeepSeek Pro，不做动态模型路由。

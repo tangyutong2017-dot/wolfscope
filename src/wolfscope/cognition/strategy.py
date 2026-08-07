@@ -31,7 +31,14 @@ class StrategyWarning(StrictModel):
 class StrategyBrief(StrictModel):
     owner: Seat
     day: int = Field(ge=0)
-    task: Literal["speech", "vote"]
+    task: Literal[
+        "speech",
+        "vote",
+        "sheriff_signup",
+        "sheriff_campaign",
+        "sheriff_withdrawal",
+        "sheriff_vote",
+    ]
     role: RoleType
     role_goal: str = Field(min_length=1)
     priorities: tuple[StrategyPriority, ...] = Field(max_length=3)
@@ -109,16 +116,27 @@ class StrategyBuilder:
         owner: int,
         role: RoleType,
         day: int,
-        task: Literal["speech", "vote"],
+        task: Literal[
+            "speech",
+            "vote",
+            "sheriff_signup",
+            "sheriff_campaign",
+            "sheriff_withdrawal",
+            "sheriff_vote",
+        ],
         situation: DecisionBrief | None = None,
     ) -> StrategyBrief:
+        priority_id, priority_description = {
+            "speech": ("state_useful_position", "给出有信息价值且不泄露私密来源的公开立场。"),
+            "vote": ("make_auditable_vote", "在合法候选人中形成有依据的票向，信息足够时避免消极弃票。"),
+            "sheriff_signup": ("assess_sheriff_value", "结合身份目标判断上警收益，不机械固定上警或警下。"),
+            "sheriff_campaign": ("present_sheriff_case", "清楚说明竞选立场和后续组织信息的方法。"),
+            "sheriff_withdrawal": ("reassess_candidacy", "听完全部竞选发言后重新评估继续竞选是否有利。"),
+            "sheriff_vote": ("choose_sheriff_auditably", "依据竞选发言选择更适合组织白天信息的候选人。"),
+        }[task]
         task_priority = StrategyPriority(
-            priority_id=("state_useful_position" if task == "speech" else "make_auditable_vote"),
-            description=(
-                "给出有信息价值且不泄露私密来源的公开立场。"
-                if task == "speech"
-                else "在合法候选人中形成有依据的票向，信息足够时避免消极弃票。"
-            ),
+            priority_id=priority_id,
+            description=priority_description,
         )
         role_priority = StrategyPriority(
             priority_id=self.ROLE_PRIORITIES[role][0],

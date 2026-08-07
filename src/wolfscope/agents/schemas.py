@@ -22,12 +22,22 @@ from wolfscope.game.day import (
     ExileVoteObservation,
     ExileVoteRound,
 )
+from wolfscope.game.sheriff import (
+    CampaignSpeechObservation,
+    SheriffSignupObservation,
+    SheriffVoteObservation,
+    SheriffWithdrawalObservation,
+)
 from wolfscope.game.types import Phase, RoleType
 
 
 class DecisionTask(StrEnum):
     SPEECH = "speech"
     VOTE = "vote"
+    SHERIFF_SIGNUP = "sheriff_signup"
+    SHERIFF_CAMPAIGN = "sheriff_campaign"
+    SHERIFF_WITHDRAWAL = "sheriff_withdrawal"
+    SHERIFF_VOTE = "sheriff_vote"
 
 
 class VoteContextMode(StrEnum):
@@ -114,8 +124,70 @@ class VoteTaskObservation(StrictModel):
         )
 
 
+class SheriffSignupTaskObservation(StrictModel):
+    task: Literal["sheriff_signup"] = "sheriff_signup"
+    actor: Seat
+    eligible_seats: tuple[Seat, ...]
+
+    @classmethod
+    def from_domain(cls, observation: SheriffSignupObservation):
+        return cls(actor=observation.actor, eligible_seats=observation.eligible_seats)
+
+
+class SheriffCampaignTaskObservation(StrictModel):
+    task: Literal["sheriff_campaign"] = "sheriff_campaign"
+    actor: Seat
+    candidates: tuple[Seat, ...]
+    previous_speeches: tuple[tuple[Seat, str], ...]
+
+    @classmethod
+    def from_domain(cls, observation: CampaignSpeechObservation):
+        return cls(
+            actor=observation.actor,
+            candidates=observation.candidates,
+            previous_speeches=observation.previous_speeches,
+        )
+
+
+class SheriffWithdrawalTaskObservation(StrictModel):
+    task: Literal["sheriff_withdrawal"] = "sheriff_withdrawal"
+    actor: Seat
+    candidates: tuple[Seat, ...]
+    campaign_speeches: tuple[tuple[Seat, str], ...]
+
+    @classmethod
+    def from_domain(cls, observation: SheriffWithdrawalObservation):
+        return cls(
+            actor=observation.actor,
+            candidates=observation.candidates,
+            campaign_speeches=observation.campaign_speeches,
+        )
+
+
+class SheriffVoteTaskObservation(StrictModel):
+    task: Literal["sheriff_vote"] = "sheriff_vote"
+    voter: Seat
+    candidates: tuple[Seat, ...]
+    campaign_speeches: tuple[tuple[Seat, str], ...]
+    withdrawn: tuple[Seat, ...]
+
+    @classmethod
+    def from_domain(cls, observation: SheriffVoteObservation):
+        return cls(
+            voter=observation.voter,
+            candidates=observation.candidates,
+            campaign_speeches=observation.campaign_speeches,
+            withdrawn=observation.withdrawn,
+        )
+
+
 TaskObservation = Annotated[
-    SpeechTaskObservation | VoteTaskObservation,
+    SpeechTaskObservation
+    | VoteTaskObservation
+    | SheriffSignupTaskObservation
+    | SheriffCampaignTaskObservation
+    | SheriffWithdrawalTaskObservation
+    | SheriffVoteTaskObservation,
     Field(discriminator="task"),
 ]
 
@@ -131,11 +203,9 @@ class AgentDecisionInput(StrictModel):
 
     @model_validator(mode="after")
     def actor_matches_viewer(self) -> AgentDecisionInput:
-        actor = (
-            self.observation.actor
-            if isinstance(self.observation, SpeechTaskObservation)
-            else self.observation.voter
-        )
+        actor = getattr(self.observation, "actor", None)
+        if actor is None:
+            actor = self.observation.voter
         if actor != self.player_view.viewer_seat:
             raise ValueError("decision observation actor must match PlayerView viewer")
         expected = PublicGameSummary.from_view(self.player_view)
@@ -166,9 +236,8 @@ class AgentDecisionInput(StrictModel):
                 != self.evidence_context.ledger_revision
             ):
                 raise ValueError("decision_brief and evidence_context revisions must match")
-        if (
-            not isinstance(self.observation, VoteTaskObservation)
-            and self.vote_context_mode is not VoteContextMode.FULL
+        if not isinstance(self.observation, VoteTaskObservation) and (
+            self.vote_context_mode is not VoteContextMode.FULL
         ):
             raise ValueError("non-full vote context mode is only valid for vote tasks")
         if self.strategy_brief is not None:
@@ -223,6 +292,46 @@ class SpeechDecision(StrictModel):
 
 class VoteDecision(StrictModel):
     action: Literal["vote"] = "vote"
+    target: Seat | None
+    confidence: Probability
+    reason: str = Field(min_length=1)
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
+
+
+class SheriffSignupDecision(StrictModel):
+    action: Literal["sheriff_signup"] = "sheriff_signup"
+    signup: bool
+    confidence: Probability
+    reason: str = Field(min_length=1)
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
+
+
+class SheriffCampaignDecision(StrictModel):
+    action: Literal["sheriff_campaign"] = "sheriff_campaign"
+    speech: str = Field(min_length=1)
+    intent: str = Field(min_length=1)
+    confidence: Probability
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
+
+
+class SheriffWithdrawalDecision(StrictModel):
+    action: Literal["sheriff_withdrawal"] = "sheriff_withdrawal"
+    withdraw: bool
+    confidence: Probability
+    reason: str = Field(min_length=1)
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
+
+
+class SheriffVoteDecision(StrictModel):
+    action: Literal["sheriff_vote"] = "sheriff_vote"
     target: Seat | None
     confidence: Probability
     reason: str = Field(min_length=1)

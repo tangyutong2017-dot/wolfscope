@@ -13,6 +13,7 @@ dist/
 .ruff_cache/
 .coverage
 htmlcov/
+replays/live/
 
 # Local configuration and secrets
 .env

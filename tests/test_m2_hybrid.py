@@ -83,6 +83,12 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
             gateway = FakeModelGateway(
                 [
                     {
+                        "action": "sheriff_signup",
+                        "signup": False,
+                        "confidence": 0.5,
+                        "reason": "测试不上警",
+                    },
+                    {
                         "action": "speak",
                         "speech": f"{seat}号通过 Fake Gateway 发言。",
                         "intent": "验证混合 Provider",
@@ -135,9 +141,13 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(result.status, GameRunStatus.MAX_DAYS_REACHED)
         self.assertFalse(state.get_player(4).alive)
         self.assertFalse(state.get_player(9).alive)
-        self.assertEqual(len(runtimes.get(4).call_records), 0)
+        self.assertEqual(len(runtimes.get(4).call_records), 1)
         for seat in (1, 2, 3, 5, 6, 7, 8, 9):
-            self.assertEqual(len(runtimes.get(seat).call_records), 2)
+            self.assertEqual(len(runtimes.get(seat).call_records), 3)
+        self.assertNotIn(
+            "sheriff_signup",
+            {call[0] for call in support.calls},
+        )
         self.assertNotIn(
             "support_day_turn",
             {call[0] for call in support.calls},
@@ -149,7 +159,7 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(claim_extractor.calls), 9)
         self.assertEqual(len(annotation_cache), 9)
         for seat in (1, 2, 3, 5, 6, 7, 8, 9):
-            vote_input = gateways[seat].inputs[1]
+            vote_input = gateways[seat].inputs[2]
             self.assertIsNotNone(vote_input.evidence_context)
             self.assertEqual(vote_input.evidence_context.owner, seat)
             self.assertGreater(vote_input.evidence_context.ledger_revision, 0)
