@@ -77,6 +77,20 @@ class VoteClaimBase(ClaimBase):
             raise ValueError("conditional vote claim requires a condition")
         if not self.conditional and self.condition is not None:
             raise ValueError("unconditional vote claim cannot contain a condition")
+        compact_text = "".join(self.supporting_text.lower().split())
+        target_is_explicit = any(
+            marker in compact_text
+            for marker in (f"{self.target}号", f"seat{self.target}")
+        )
+        vote_is_explicit = any(
+            marker in compact_text
+            for marker in ("投", "票", "出", "放逐", "归", "vote", "exile")
+        )
+        if not target_is_explicit or not vote_is_explicit:
+            raise ValueError(
+                "vote claim supporting_text must explicitly contain both "
+                "the target seat and a voting/exile action",
+            )
         return self
 
 

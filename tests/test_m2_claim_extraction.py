@@ -10,6 +10,7 @@ from wolfscope.cognition.claims import (
     RoleClaim,
     SpeechClaimExtraction,
     VoteIntentClaim,
+    VoteRecommendationClaim,
     VoteIntentType,
 )
 from wolfscope.cognition.evidence import PublicClaimEvidence, RawSpeech
@@ -78,6 +79,37 @@ class PublicClaimSchemaTests(unittest.TestCase):
                 summary="条件投票",
                 supporting_text="如果没人对跳就投1号",
             )
+
+    def test_vote_claim_rejects_inherited_target_from_previous_sentence(self) -> None:
+        with self.assertRaisesRegex(ValidationError, "target seat"):
+            VoteRecommendationClaim(
+                target=1,
+                conditional=True,
+                condition="后面有人对跳",
+                summary="若有人对跳再比较发言",
+                supporting_text="如果后面有人对跳，再比较双方发言",
+            )
+
+    def test_vote_claim_requires_explicit_voting_action(self) -> None:
+        with self.assertRaisesRegex(ValidationError, "voting/exile action"):
+            VoteRecommendationClaim(
+                target=1,
+                conditional=True,
+                condition="后面有人对跳",
+                summary="若有人对跳再看1号发言",
+                supporting_text="如果后面有人对跳，再看1号发言",
+            )
+
+    def test_explicit_conditional_vote_remains_valid(self) -> None:
+        claim = VoteRecommendationClaim(
+            target=1,
+            conditional=True,
+            condition="后面无人对跳",
+            summary="无人对跳则投1号",
+            supporting_text="如果后面无人对跳，今天投1号",
+        )
+
+        self.assertEqual(claim.target, 1)
 
 
 class EvidencePipelineTests(unittest.IsolatedAsyncioTestCase):
