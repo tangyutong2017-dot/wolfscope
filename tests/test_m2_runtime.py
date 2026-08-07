@@ -121,7 +121,7 @@ class ModelConfigTests(unittest.IsolatedAsyncioTestCase):
             output_schema=VoteDecision,
         )
 
-        self.assertEqual(gateway.configs[0].max_tokens, 1200)
+        self.assertEqual(gateway.configs[0].max_tokens, 1500)
         self.assertEqual(gateway.configs[1].max_tokens, 2000)
 
 
