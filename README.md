@@ -76,7 +76,7 @@ wolfscope-m1 good-win-seed-42 --output-dir replays --overwrite
 python -m unittest discover -s tests
 ```
 
-当前包含 140 项自动化测试，覆盖确定性规则内核、AgentScope 决策和混合单日局，以及 EvidenceLedger、确定性映射、规则推导、严格公共 Claim、逐 Claim 容错解析、失败回归样本、紧凑 EvidenceContext、本地 Evidence 引用审计、批量缓存、ID 隔离和失败降级。
+当前包含 145 项自动化测试，覆盖确定性规则内核、AgentScope 决策和混合单日局，以及 EvidenceLedger、确定性映射、规则推导、严格公共 Claim、逐 Claim 容错解析、失败回归样本、紧凑 EvidenceContext、本地 Evidence 引用审计、确定性角色先验与硬证据更新、ID 隔离和失败降级。
 
 ## 项目文档
 
