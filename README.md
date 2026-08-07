@@ -2,7 +2,7 @@
 
 WolfScope 是一个基于 AgentScope 的九人狼人杀多智能体博弈与评测项目。项目采用“确定性 Python 裁判 + 角色隔离的 Agent 决策”架构：游戏规则、真实身份、信息可见性和胜负判断由 Engine 掌握，LLM 只能根据自己的玩家视角提交结构化行动。
 
-当前完成的是 M1 确定性游戏内核。无需调用 LLM，即可用固定 seed 和严格剧本运行完整九人局并生成上帝视角 JSON Replay。AgentScope 认知玩家、证据账本、概率推理和策略工具将在 M2 接入。
+M1 确定性游戏内核已经完成。无需调用 LLM，即可用固定 seed 和严格剧本运行完整九人局并生成上帝视角 JSON Replay。项目现已进入 M2；M2-1 已完成九玩家隔离、结构化决策和模型调用追踪骨架，并通过一次 DeepSeek Flash 发言冒烟测试。
 
 ## 当前功能
 
@@ -76,7 +76,7 @@ wolfscope-m1 good-win-seed-42 --output-dir replays --overwrite
 python -m unittest discover -s tests
 ```
 
-M1 当前包含 79 项自动化测试，覆盖状态模型、夜晚、警长、白天、死亡链、胜负、PlayerView 信息隔离、完整循环、第一版缺陷回归、ScriptedProvider 和 Replay 确定性。
+当前包含 95 项自动化测试：79 项 M1 测试覆盖规则内核、PlayerView 信息隔离、完整循环、第一版缺陷回归、ScriptedProvider 和 Replay 确定性；16 项 M2-1 测试覆盖模型配置、结构化决策、AgentScope 消息适配、格式修复、安全降级、调用追踪和九玩家运行时隔离。
 
 ## 项目文档
 
@@ -85,8 +85,9 @@ M1 当前包含 79 项自动化测试，覆盖状态模型、夜晚、警长、�
 - [M1 验收结果](docs/M1_ACCEPTANCE.md)
 - [旧版迁移计划](docs/MIGRATION_PLAN.md)
 - [第一版缺陷回归矩阵](docs/V1_REGRESSION_MATRIX.md)
+- [M2-1 认知玩家接入设计](docs/M2_1_DESIGN.md)
 - [架构决策记录](docs/decisions/)
 
 ## 当前阶段
 
-M1 的规则内核、完整 `PlayerView` 构建器和对局 Replay 已经跑通。提交首个 Git 里程碑前，还将把第一版项目中的关键失败模式整理为明确的回归测试。随后进入 M2：AgentScope 玩家、证据账本、信念概率、策略库和决策工具。
+M1 已完成并提交。M2-1 已用 Fake Gateway 零成本验证九玩家隔离、发言/投票结构化接口，并完成 AgentScope DeepSeek Gateway、一次格式修复、安全降级和调用追踪；Flash 单玩家发言冒烟已经通过，下一步是投票冒烟和混合 Provider。正式实验中的九名玩家统一使用 DeepSeek Pro，不做动态模型路由。

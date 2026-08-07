@@ -1,0 +1,60 @@
+"""Framework-independent structured model call protocol and trace records."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Any, Protocol, TypeVar
+
+from pydantic import BaseModel, Field
+
+from wolfscope.agents.schemas import AgentDecisionInput, DecisionTask
+from wolfscope.contracts import Seat, StrictModel
+
+from .config import DeepSeekModelConfig
+
+
+class TokenUsage(StrictModel):
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+class ModelCallRecord(StrictModel):
+    call_id: int
+    player: Seat
+    task: DecisionTask
+    model_name: str
+    thinking_enabled: bool
+    success: bool
+    latency_ms: int
+    retry_count: int = 0
+    fallback_used: bool = False
+    token_usage: TokenUsage = Field(default_factory=TokenUsage)
+    error_type: str | None = None
+
+
+TModel = TypeVar("TModel", bound=BaseModel)
+
+
+@dataclass(frozen=True, slots=True)
+class ModelCallResult:
+    value: BaseModel
+    record: ModelCallRecord
+
+
+class ModelGatewayError(ValueError):
+    def __init__(self, message: str, record: ModelCallRecord) -> None:
+        super().__init__(message)
+        self.record = record
+
+
+class ModelGateway(Protocol):
+    async def structured_call(
+        self,
+        *,
+        player: int,
+        task: DecisionTask,
+        decision_input: AgentDecisionInput,
+        output_schema: type[TModel],
+        config: DeepSeekModelConfig,
+    ) -> ModelCallResult:
+        ...

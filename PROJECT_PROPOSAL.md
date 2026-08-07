@@ -401,6 +401,10 @@ wolfscope/
 
 ### M2：AgentScope 认知玩家
 
+- [x] M2-1a：定义 Flash 测试 / Pro 正式运行配置、发言与投票 Schema、模型 Gateway 和零成本 Fake Gateway
+- [x] M2-1b：建立九个座位隔离的 PlayerRuntime、玩家视图归属校验和模型调用追踪
+- [x] M2-1c（离线部分）：实现 AgentScope DeepSeek Gateway、授权 Prompt 渲染、一次格式修复与显式安全降级
+- [ ] M2-1c：接入 AgentScope 与 DeepSeek Flash，完成发言和放逐投票的真实模型冒烟测试
 - [ ] 九个独立 AgentScope 玩家
 - [ ] 感知层和证据账本
 - [ ] 信念状态与启发式身份概率
@@ -412,6 +416,8 @@ wolfscope/
 - [ ] 完成至少一局真实模型端到端对局
 
 完成标准：Agent 能引用结构化证据进行决策，行动合法，私有信息边界测试通过，并产生完整可审计 Replay。
+
+M2 模型策略固定为：自动化测试默认使用 Fake Gateway；M2-1 真实接口开发和冒烟测试使用 `deepseek-v4-flash`；正式对局九名玩家统一使用 `deepseek-v4-pro`。单局内不按角色、阶段或任务动态路由模型，以减少实验混杂变量。API 密钥只从运行环境注入，不进入配置对象、日志或 Replay。
 
 ### M3：评测、消融与作品集交付
 
@@ -563,7 +569,7 @@ LLM 采样不能仅靠 seed 完全复现，因此：
 
 ### P0：立项前必须确认
 
-1. 第一阶段使用哪个模型作为主模型和哪个模型作为低成本感知模型。
+1. [已确认] M2-1 测试使用 DeepSeek Flash，正式对局统一使用 DeepSeek Pro，不做动态模型路由。
 2. 最终实验可接受的模型调用预算和对局数量。
 
 ### P1：M0/M1 期间确认
