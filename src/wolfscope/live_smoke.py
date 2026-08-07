@@ -664,6 +664,9 @@ async def run_full_game(
             "invalid_strategy_references": sum(
                 len(record.invalid_strategy_ids) for record in records
             ),
+            "speech_truncations": sum(
+                record.speech_truncated for record in records
+            ),
             "by_task": task_stats,
         },
         "extraction_summary": {

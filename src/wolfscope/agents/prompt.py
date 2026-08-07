@@ -25,6 +25,7 @@ from wolfscope.agents.schemas import (
     WitchActionTaskObservation,
     WolfTargetTaskObservation,
 )
+from wolfscope.agents.speech_policy import SpeechPolicy
 
 
 STATIC_RULES = """本局采用标准九人屠边规则：3狼人、3平民、预言家、女巫、猎人。
@@ -79,6 +80,14 @@ def render_decision_prompt(
         DecisionTask.BADGE_TRANSFER: "你已经死亡且正在结算警徽；立即移交给 eligible_targets 中一人，或 target=null 永久撕毁。",
     }[task]
     payload = _model_payload(decision_input)
+    speech_limit = SpeechPolicy.limit_for(task)
+    if speech_limit is not None:
+        payload["speech_length"] = {
+            "target_min_chars": speech_limit.target_min_chars,
+            "target_max_chars": speech_limit.target_max_chars,
+            "hard_max_chars": speech_limit.hard_max_chars,
+            "instruction": "尽量落在建议区间内，不得超过硬上限；按中文字符计数。",
+        }
     rendered_payload = json.dumps(payload, ensure_ascii=False, indent=2)
     return f"""当前任务：{task_text}
 

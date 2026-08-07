@@ -50,6 +50,9 @@ class ModelCallRecord(StrictModel):
     failure_stage: str | None = None
     failure_reason: str | None = None
     attempts: tuple[ModelAttemptRecord, ...] = ()
+    speech_original_chars: int | None = Field(default=None, ge=0)
+    speech_final_chars: int | None = Field(default=None, ge=0)
+    speech_truncated: bool = False
 
 
 TModel = TypeVar("TModel", bound=BaseModel)

@@ -46,6 +46,7 @@ from wolfscope.player_view import PlayerViewBuilder
 from wolfscope.cognition.context import EvidenceContextBuilder
 from wolfscope.cognition.brief import DecisionBriefBuilder
 from wolfscope.cognition.strategy import StrategyBuilder, WolfTeamPlan
+from wolfscope.agents.speech_policy import SpeechPolicy
 
 if TYPE_CHECKING:
     from wolfscope.cognition.extraction import EvidencePipeline
@@ -104,7 +105,13 @@ class AgentGameProvider:
                 f"{observation.actor}号本轮暂时没有新增信息。",
             )
         assert decision.speech is not None
-        return DayTurnAction.speak(decision.speech)
+        return DayTurnAction.speak(
+            self._bounded_speech(
+                runtime,
+                DecisionTask.SPEECH,
+                decision.speech,
+            ),
+        )
 
     async def choose_exile_vote(self, observation) -> int | None:
         decision_input = await self._input(
@@ -170,6 +177,18 @@ class AgentGameProvider:
                 else VoteContextMode.FULL
             ),
         )
+
+    @staticmethod
+    def _bounded_speech(runtime, task: DecisionTask, speech: str) -> str:
+        result = SpeechPolicy.enforce(task, speech)
+        runtime.call_records[-1] = runtime.call_records[-1].model_copy(
+            update={
+                "speech_original_chars": result.original_chars,
+                "speech_final_chars": result.final_chars,
+                "speech_truncated": result.truncated,
+            },
+        )
+        return result.text
 
     async def choose_wolf_target(self, observation):
         task_observation = WolfTargetTaskObservation.from_domain(observation)
@@ -242,7 +261,11 @@ class AgentGameProvider:
             output_schema=SheriffCampaignDecision,
             use_safe_fallback=True,
         )
-        return decision.speech
+        return self._bounded_speech(
+            self.runtimes.get(observation.actor),
+            DecisionTask.SHERIFF_CAMPAIGN,
+            decision.speech,
+        )
 
     async def choose_withdrawal(self, observation):
         decision_input = await self._input(
@@ -290,7 +313,11 @@ class AgentGameProvider:
             output_schema=PkSpeechDecision,
             use_safe_fallback=True,
         )
-        return decision.speech
+        return self._bounded_speech(
+            self.runtimes.get(observation.actor),
+            DecisionTask.PK_SPEECH,
+            decision.speech,
+        )
 
     async def last_words(self, observation):
         task_observation = LastWordsTaskObservation.from_domain(observation)
@@ -301,7 +328,11 @@ class AgentGameProvider:
             output_schema=LastWordsDecision,
             use_safe_fallback=True,
         )
-        return decision.speech
+        return self._bounded_speech(
+            self.runtimes.get(observation.actor),
+            DecisionTask.LAST_WORDS,
+            decision.speech,
+        )
 
     async def death_last_words(self, observation):
         task_observation = DeathLastWordsTaskObservation.from_domain(observation)
@@ -316,7 +347,11 @@ class AgentGameProvider:
             output_schema=LastWordsDecision,
             use_safe_fallback=True,
         )
-        return decision.speech
+        return self._bounded_speech(
+            self.runtimes.get(observation.actor),
+            DecisionTask.DEATH_LAST_WORDS,
+            decision.speech,
+        )
 
     async def choose_hunter_target(self, observation):
         task_observation = HunterTargetTaskObservation.from_domain(observation)

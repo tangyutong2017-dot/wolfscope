@@ -76,7 +76,7 @@ wolfscope-m1 good-win-seed-42 --output-dir replays --overwrite
 python -m unittest discover -s tests
 ```
 
-当前包含 167 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent、夜间角色 Agent、死亡技能/遗言 Agent、完整多日 Agent 终局和 Replay 往返，以及 EvidenceLedger、确定性映射、规则推导、严格公共 Claim、逐 Claim 容错解析、失败回归样本、紧凑 EvidenceContext、本地 Evidence/Strategy 引用审计、ID 隔离和失败降级。
+当前包含 171 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent、夜间角色 Agent、死亡技能/遗言 Agent、完整多日 Agent 终局和 Replay 往返，以及 EvidenceLedger、规则推导、公共 Claim、失败回归样本、Evidence/Strategy 引用审计、分阶段发言长度控制、ID 隔离和失败降级。
 
 ## 项目文档
 
@@ -89,6 +89,7 @@ python -m unittest discover -s tests
 - [M2-2 EvidenceLedger 设计](docs/M2_2_EVIDENCE_DESIGN.md)
 - [M2-5 行动 Agent 化](docs/M2_5_ACTION_AGENTIZATION.md)
 - [M2-6 完整 Agent 终局验收](docs/M2_6_FULL_GAME_ACCEPTANCE.md)
+- [M2-7 发言长度策略](docs/M2_7_SPEECH_POLICY.md)
 - [架构决策记录](docs/decisions/)
 
 ## 当前阶段
