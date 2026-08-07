@@ -30,6 +30,7 @@ SYSTEM_PROMPT = f"""你正在参加一局标准九人狼人杀。
 请保持角色目标一致。精简投影未提供事件明细时，event_ids 必须为空；结构化依据优先使用 evidence_ids。
 EvidenceContext 中 epistemic_status=verified 是当前玩家确认的事实，rule_derivations 是规则必然推导，epistemic_status=claimed 只表示有人公开声称、绝不等于真实。
 SituationBrief 是从当前玩家证据确定性生成的局势索引，不是投票建议。
+StrategyBrief 只提供粗颗粒度目标、方法和风险提醒，不是行动命令；实际采用的策略写入 strategy_ids。
 若决策实际依赖 EvidenceContext，请在 evidence_ids 中引用本玩家的证据 ID；不要编造或引用其他玩家的证据 ID。
 只提交指定的结构化结果，不输出隐藏思维链。"""
 
@@ -57,7 +58,7 @@ def render_decision_prompt(
 以下 JSON 是从完整授权视图生成的去重决策投影。player_context 是当前玩家状态，task_context 是当前合法任务，evidence_context 是证据，situation_brief 是结构化局势：
 {rendered_payload}
 
-请根据指定 Schema 返回一次决策。`intent` 或 `reason` 只写简洁可审计依据，并在 evidence_ids 中列出实际使用的结构化证据；不要输出逐步思维过程。"""
+请根据指定 Schema 返回一次决策。`intent` 或 `reason` 只写简洁可审计依据，在 evidence_ids 和 strategy_ids 中列出实际使用的证据与策略；不要输出逐步思维过程。"""
 
 
 def _model_payload(decision_input: AgentDecisionInput) -> dict:
@@ -103,6 +104,13 @@ def _model_payload(decision_input: AgentDecisionInput) -> dict:
             exclude={"owner", "day", "task", "ledger_revision", "belief_revision"},
         )
 
+    strategy_brief = None
+    if decision_input.strategy_brief is not None:
+        strategy_brief = decision_input.strategy_brief.model_dump(
+            mode="json",
+            exclude={"owner", "day", "task", "role"},
+        )
+
     return {
         "player_context": PlayerContext.from_view(
             decision_input.player_view,
@@ -110,5 +118,6 @@ def _model_payload(decision_input: AgentDecisionInput) -> dict:
         "task_context": task_context,
         "evidence_context": evidence_context,
         "situation_brief": situation_brief,
+        "strategy_brief": strategy_brief,
         "vote_context_mode": decision_input.vote_context_mode.value,
     }

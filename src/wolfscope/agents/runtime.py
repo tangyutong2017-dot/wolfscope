@@ -151,6 +151,37 @@ class PlayerRuntime:
                 ),
             },
         )
+        strategy_brief = decision_input.strategy_brief
+        valid_strategy_ids = set(
+            strategy_brief.strategy_ids if strategy_brief is not None else (),
+        )
+        submitted_strategy_ids = tuple(getattr(decision, "strategy_ids", ()))
+        invalid_strategy_ids = tuple(
+            strategy_id
+            for strategy_id in submitted_strategy_ids
+            if strategy_id not in valid_strategy_ids
+        )
+        if invalid_strategy_ids:
+            decision = decision.model_copy(
+                update={
+                    "strategy_ids": tuple(
+                        strategy_id
+                        for strategy_id in submitted_strategy_ids
+                        if strategy_id in valid_strategy_ids
+                    ),
+                },
+            )
+        accepted_strategy_ids = tuple(
+            strategy_id
+            for strategy_id in submitted_strategy_ids
+            if strategy_id in valid_strategy_ids
+        )
+        record = record.model_copy(
+            update={
+                "invalid_strategy_ids": invalid_strategy_ids,
+                "accepted_strategy_ids": accepted_strategy_ids,
+            },
+        )
         if isinstance(decision, VoteDecision):
             observation = decision_input.observation
             if not isinstance(observation, VoteTaskObservation):

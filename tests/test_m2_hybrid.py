@@ -154,6 +154,9 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(vote_input.evidence_context.owner, seat)
             self.assertGreater(vote_input.evidence_context.ledger_revision, 0)
             self.assertIsNotNone(vote_input.decision_brief)
+            self.assertIsNotNone(vote_input.strategy_brief)
+            self.assertEqual(vote_input.strategy_brief.owner, seat)
+            self.assertLessEqual(len(vote_input.strategy_brief.methods), 5)
             self.assertEqual(vote_input.vote_context_mode, "full")
             self.assertEqual(vote_input.decision_brief.owner, seat)
             self.assertEqual(

@@ -33,3 +33,7 @@ StrategyBrief
 ```
 
 Strategy 不读取 GOD Replay，不替 Engine 判定规则，不把公开 Claim 当成事实，也不直接决定最终行动。LLM仍在一次结构化决策中选择策略与行动，Trace记录其引用的 Strategy ID 和 Evidence ID。
+
+## 粗颗粒度 v1
+
+当前实现采用最小静态角色手册加少量动态风险：一句角色目标、最多3项优先级、5种方法和3条警告。本地 `StrategyBuilder` 不调用模型；发言与投票结果通过 `strategy_ids` 声明实际采用的方法，Runtime剔除并记录伪造ID。更细策略树、对手模型、RAG、长期规划和学习型策略留作后续扩展。

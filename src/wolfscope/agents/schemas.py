@@ -16,6 +16,7 @@ from wolfscope.contracts import (
 )
 from wolfscope.cognition.context import EvidenceContext
 from wolfscope.cognition.brief import DecisionBrief
+from wolfscope.cognition.strategy import StrategyBrief
 from wolfscope.game.day import (
     DayTurnObservation,
     ExileVoteObservation,
@@ -125,6 +126,7 @@ class AgentDecisionInput(StrictModel):
     observation: TaskObservation
     evidence_context: EvidenceContext | None = None
     decision_brief: DecisionBrief | None = None
+    strategy_brief: StrategyBrief | None = None
     vote_context_mode: VoteContextMode = VoteContextMode.FULL
 
     @model_validator(mode="after")
@@ -169,6 +171,15 @@ class AgentDecisionInput(StrictModel):
             and self.vote_context_mode is not VoteContextMode.FULL
         ):
             raise ValueError("non-full vote context mode is only valid for vote tasks")
+        if self.strategy_brief is not None:
+            if self.strategy_brief.owner != self.player_view.viewer_seat:
+                raise ValueError("strategy_brief owner must match PlayerView viewer")
+            if self.strategy_brief.day != self.player_view.day:
+                raise ValueError("strategy_brief day must match PlayerView")
+            if self.strategy_brief.task != self.observation.task:
+                raise ValueError("strategy_brief task must match observation")
+            if self.strategy_brief.role != self.player_view.own_role:
+                raise ValueError("strategy_brief role must match PlayerView")
         return self
 
     @property
@@ -199,6 +210,7 @@ class SpeechDecision(StrictModel):
     confidence: Probability
     event_ids: tuple[int, ...] = ()
     evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def action_payload_is_coherent(self) -> SpeechDecision:
@@ -216,3 +228,4 @@ class VoteDecision(StrictModel):
     reason: str = Field(min_length=1)
     event_ids: tuple[int, ...] = ()
     evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()

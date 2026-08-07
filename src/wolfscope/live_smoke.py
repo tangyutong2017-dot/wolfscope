@@ -292,6 +292,12 @@ async def run_hybrid_day(
                 len(record.accepted_context_only_evidence_ids)
                 for record in records
             ),
+            "strategy_references": sum(
+                len(record.accepted_strategy_ids) for record in records
+            ),
+            "invalid_strategy_references": sum(
+                len(record.invalid_strategy_ids) for record in records
+            ),
         },
         "extraction_summary": {
             "calls": len(extraction_records),

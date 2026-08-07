@@ -19,6 +19,7 @@ from wolfscope.game.day import DayTurnAction
 from wolfscope.player_view import PlayerViewBuilder
 from wolfscope.cognition.context import EvidenceContextBuilder
 from wolfscope.cognition.brief import DecisionBriefBuilder
+from wolfscope.cognition.strategy import StrategyBuilder
 
 from .support import DeterministicSupportProvider
 
@@ -39,6 +40,7 @@ class HybridProvider:
         evidence_context_builder: EvidenceContextBuilder | None = None,
         decision_brief_builder: DecisionBriefBuilder | None = None,
         vote_context_mode: VoteContextMode = VoteContextMode.FULL,
+        strategy_builder: StrategyBuilder | None = None,
     ) -> None:
         self.view_builder = view_builder
         self.runtimes = runtimes
@@ -49,6 +51,7 @@ class HybridProvider:
         )
         self.decision_brief_builder = decision_brief_builder or DecisionBriefBuilder()
         self.vote_context_mode = vote_context_mode
+        self.strategy_builder = strategy_builder or StrategyBuilder()
 
     async def take_day_turn(self, observation) -> DayTurnAction:
         decision_input = await self._input(
@@ -111,12 +114,20 @@ class HybridProvider:
         else:
             evidence_context = None
             decision_brief = None
+        strategy_brief = self.strategy_builder.build(
+            owner=seat,
+            role=view.own_role,
+            day=view.day,
+            task=observation.task,
+            situation=decision_brief,
+        )
         return AgentDecisionInput(
             player_view=view,
             public_summary=PublicGameSummary.from_view(view),
             observation=observation,
             evidence_context=evidence_context,
             decision_brief=decision_brief,
+            strategy_brief=strategy_brief,
             vote_context_mode=(
                 self.vote_context_mode
                 if isinstance(observation, VoteTaskObservation)
