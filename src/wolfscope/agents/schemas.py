@@ -8,6 +8,7 @@ from typing import Annotated, Literal
 from pydantic import Field, model_validator
 
 from wolfscope.contracts import PlayerView, Probability, Seat, StrictModel
+from wolfscope.cognition.context import EvidenceContext
 from wolfscope.game.day import (
     DayTurnObservation,
     ExileVoteObservation,
@@ -81,6 +82,7 @@ class AgentDecisionInput(StrictModel):
     player_view: PlayerView
     public_summary: PublicGameSummary
     observation: TaskObservation
+    evidence_context: EvidenceContext | None = None
 
     @model_validator(mode="after")
     def actor_matches_viewer(self) -> AgentDecisionInput:
@@ -94,6 +96,11 @@ class AgentDecisionInput(StrictModel):
         expected = PublicGameSummary.from_view(self.player_view)
         if self.public_summary != expected:
             raise ValueError("public_summary must be derived from PlayerView")
+        if (
+            self.evidence_context is not None
+            and self.evidence_context.owner != self.player_view.viewer_seat
+        ):
+            raise ValueError("evidence_context owner must match PlayerView viewer")
         return self
 
 
@@ -103,6 +110,7 @@ class SpeechDecision(StrictModel):
     intent: str = Field(min_length=1)
     confidence: Probability
     event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def action_payload_is_coherent(self) -> SpeechDecision:
@@ -119,3 +127,4 @@ class VoteDecision(StrictModel):
     confidence: Probability
     reason: str = Field(min_length=1)
     event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()

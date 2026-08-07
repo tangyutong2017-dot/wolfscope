@@ -71,3 +71,5 @@ AgentScope 公共语义提取器已经实现并接入 HybridProvider 的可选�
 投票 Claim 额外要求 `supporting_text` 在同一原文片段中同时出现投票/放逐动作和明确目标座位，禁止从前一句继承目标。真实 API 验证中，宽松传输层首次返回后，本地校验正确接收7号的身份声明、首夜查杀和归票建议三条 Claim，拒绝数为0；独立失败样本也验证非法投票 Claim 会被逐条隔离并输出字段级诊断。
 
 语义数据集当前定位为真实失败回归样本库，不主动扩充为完整人工 Gold，也不使用非穷尽标注计算正式 Precision/Recall。只有发现明确解析错误或 Evidence 影响决策时才增补案例；一对一匹配器、Forbidden 检查和盲测运行器作为回归诊断基础设施保留。这样优先推进 Agent 对 Evidence 的实际使用，避免在 M2 阶段投入过多人工标注和 API token。
+
+`EvidenceContextBuilder` 已把玩家本地 Ledger 转为一次决策使用的紧凑快照：硬事实和规则推导全部保留，身份/查验 Claim 永久保留，其他软 Claim 只保留最近30条，RawSpeech 不重复进入快照。HybridProvider 在每次决策前完成 Ledger 同步并将快照写入 `AgentDecisionInput`。模型可在 `evidence_ids` 中引用实际使用的本地证据；Runtime 会删除不存在或属于其他座位的引用并写入审计 Trace。Prompt 明确区分 VERIFIED、RULE_DERIVATION 与 CLAIMED，避免把公开声明当作真相。

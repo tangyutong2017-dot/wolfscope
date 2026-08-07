@@ -20,11 +20,14 @@ from wolfscope.agents.schemas import (
 )
 from wolfscope.agents.support import DeterministicSupportProvider
 from wolfscope.cognition.claims import SpeechExtractionItem
+from wolfscope.cognition.claims import CheckClaim, ClaimAlignment
+from wolfscope.cognition.context import EvidenceContextBuilder
 from wolfscope.cognition.extraction import (
     EvidencePipeline,
     PublicSpeechAnnotationCache,
 )
 from wolfscope.cognition.ledger import EvidenceLedgerRegistry
+from wolfscope.cognition.ledger import EvidenceLedger
 from wolfscope.contracts import Visibility
 from wolfscope.game import GameState, PlayerState
 from wolfscope.game.config import STANDARD_9_RULES
@@ -65,6 +68,56 @@ def _speech_input() -> AgentDecisionInput:
             previous_speeches=((1, "1号认为首轮信息较少，希望后置位提供更多判断。"),),
             can_explode=False,
         ),
+    )
+
+
+def _evidence_speech_input() -> AgentDecisionInput:
+    state = GameState(
+        players=[
+            PlayerState(seat=seat, role=role)
+            for seat, role in enumerate(STANDARD_9_RULES.roles, start=1)
+        ],
+        phase=Phase.DAY_SPEECH,
+    )
+    events = EventLog()
+    events.emit(
+        day=1,
+        phase=Phase.DAY_SPEECH,
+        event_type="day_speech",
+        visibility=Visibility.PUBLIC,
+        actor=7,
+        content="我是7号预言家，昨夜查验1号是狼人。",
+    )
+    view = PlayerViewBuilder(state, events).build(4)
+    ledger = EvidenceLedger(owner=4)
+    ledger.sync(view)
+    speech_event = next(
+        event for event in view.visible_events if event.event_type == "day_speech"
+    )
+    ledger.ingest_public_claims(
+        event=speech_event,
+        speaker=7,
+        claims=(
+            CheckClaim(
+                target=1,
+                night=1,
+                result=ClaimAlignment.WEREWOLF,
+                summary="7号声称首夜查验1号为狼人",
+                supporting_text="昨夜查验1号是狼人",
+            ),
+        ),
+        extractor_version="live-smoke",
+    )
+    return AgentDecisionInput(
+        player_view=view,
+        public_summary=PublicGameSummary.from_view(view),
+        observation=SpeechTaskObservation(
+            actor=4,
+            speaking_order=tuple(range(1, 10)),
+            previous_speeches=((7, "我是7号预言家，昨夜查验1号是狼人。"),),
+            can_explode=False,
+        ),
+        evidence_context=EvidenceContextBuilder().build(ledger),
     )
 
 
@@ -116,6 +169,24 @@ async def run_speech() -> dict:
         use_safe_fallback=False,
     )
     return {
+        "decision": decision.model_dump(mode="json"),
+        "trace": runtime.call_records[-1].model_dump(mode="json"),
+    }
+
+
+async def run_evidence_speech() -> dict:
+    config = model_config_for(ModelProfile.TEST)
+    gateway = AgentScopeModelGateway.from_environment(config)
+    runtime = PlayerRuntime(4, config, gateway)
+    decision_input = _evidence_speech_input()
+    decision = await runtime.decide(
+        task=DecisionTask.SPEECH,
+        decision_input=decision_input,
+        output_schema=SpeechDecision,
+        use_safe_fallback=False,
+    )
+    return {
+        "available_evidence_ids": list(decision_input.evidence_context.evidence_ids),
         "decision": decision.model_dump(mode="json"),
         "trace": runtime.call_records[-1].model_dump(mode="json"),
     }
@@ -274,11 +345,25 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="WolfScope opt-in live smoke")
     parser.add_argument(
         "scenario",
-        choices=("speech", "vote", "hybrid-day", "claim-extraction"),
+        choices=(
+            "speech",
+            "evidence-speech",
+            "vote",
+            "hybrid-day",
+            "claim-extraction",
+        ),
     )
     args = parser.parse_args()
     if args.scenario == "speech":
         print(json.dumps(asyncio.run(run_speech()), ensure_ascii=False, indent=2))
+    elif args.scenario == "evidence-speech":
+        print(
+            json.dumps(
+                asyncio.run(run_evidence_speech()),
+                ensure_ascii=False,
+                indent=2,
+            ),
+        )
     elif args.scenario == "vote":
         print(json.dumps(asyncio.run(run_vote()), ensure_ascii=False, indent=2))
     elif args.scenario == "hybrid-day":

@@ -98,6 +98,27 @@ class PlayerRuntime:
             record = record.model_copy(
                 update={"invalid_event_ids": invalid_event_ids},
             )
+        context = decision_input.evidence_context
+        valid_evidence_ids = set(context.evidence_ids if context is not None else ())
+        submitted_evidence_ids = tuple(getattr(decision, "evidence_ids", ()))
+        invalid_evidence_ids = tuple(
+            evidence_id
+            for evidence_id in submitted_evidence_ids
+            if evidence_id not in valid_evidence_ids
+        )
+        if invalid_evidence_ids:
+            decision = decision.model_copy(
+                update={
+                    "evidence_ids": tuple(
+                        evidence_id
+                        for evidence_id in submitted_evidence_ids
+                        if evidence_id in valid_evidence_ids
+                    ),
+                },
+            )
+            record = record.model_copy(
+                update={"invalid_evidence_ids": invalid_evidence_ids},
+            )
         if isinstance(decision, VoteDecision):
             observation = decision_input.observation
             if not isinstance(observation, VoteTaskObservation):

@@ -411,7 +411,7 @@ wolfscope/
 - [x] M2-2b：接入只读公开文本的 AgentScope 语义提取器，并在 HybridProvider 决策前同步 EvidencePipeline
 - [x] M2-2b 回归保障：逐 Claim 容错、字段级诊断和真实失败样本库；完整语义 Gold 与正式 Precision/Recall 延后到确有评测需求时建设
 - [ ] 九个独立 AgentScope 玩家
-- [ ] 感知层和证据账本
+- [x] 感知层和证据账本：玩家本地 Ledger、紧凑 EvidenceContext、决策前同步及 Evidence ID 引用审计
 - [ ] 信念状态与启发式身份概率
 - [ ] 策略库与局面检索
 - [ ] 票型和概率工具

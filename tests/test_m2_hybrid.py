@@ -150,6 +150,9 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(annotation_cache), 9)
         for seat in (1, 2, 3, 5, 6, 7, 8, 9):
             vote_input = gateways[seat].inputs[1]
+            self.assertIsNotNone(vote_input.evidence_context)
+            self.assertEqual(vote_input.evidence_context.owner, seat)
+            self.assertGreater(vote_input.evidence_context.ledger_revision, 0)
             self.assertNotIn(
                 "exile_votes",
                 {

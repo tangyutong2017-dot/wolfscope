@@ -16,6 +16,7 @@ from wolfscope.agents.schemas import (
 )
 from wolfscope.game.day import DayTurnAction
 from wolfscope.player_view import PlayerViewBuilder
+from wolfscope.cognition.context import EvidenceContextBuilder
 
 from .support import DeterministicSupportProvider
 
@@ -33,11 +34,15 @@ class HybridProvider:
         runtimes: PlayerRuntimeRegistry,
         support: DeterministicSupportProvider,
         evidence_pipeline: EvidencePipeline | None = None,
+        evidence_context_builder: EvidenceContextBuilder | None = None,
     ) -> None:
         self.view_builder = view_builder
         self.runtimes = runtimes
         self.support = support
         self.evidence_pipeline = evidence_pipeline
+        self.evidence_context_builder = (
+            evidence_context_builder or EvidenceContextBuilder()
+        )
 
     async def take_day_turn(self, observation) -> DayTurnAction:
         decision_input = await self._input(
@@ -84,10 +89,16 @@ class HybridProvider:
         view = self.view_builder.build(seat)
         if self.evidence_pipeline is not None:
             await self.evidence_pipeline.sync(view)
+            evidence_context = self.evidence_context_builder.build(
+                self.evidence_pipeline.ledgers.get(seat),
+            )
+        else:
+            evidence_context = None
         return AgentDecisionInput(
             player_view=view,
             public_summary=PublicGameSummary.from_view(view),
             observation=observation,
+            evidence_context=evidence_context,
         )
 
     async def choose_wolf_target(self, observation):
