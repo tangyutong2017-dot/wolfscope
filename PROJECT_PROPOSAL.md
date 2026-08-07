@@ -404,7 +404,7 @@ wolfscope/
 - [x] M2-1a：定义 Flash 测试 / Pro 正式运行配置、发言与投票 Schema、模型 Gateway 和零成本 Fake Gateway
 - [x] M2-1b：建立九个座位隔离的 PlayerRuntime、玩家视图归属校验和模型调用追踪
 - [x] M2-1c（离线部分）：实现 AgentScope DeepSeek Gateway、授权 Prompt 渲染、一次格式修复与显式安全降级
-- [ ] M2-1c：接入 AgentScope 与 DeepSeek Flash，完成发言和放逐投票的真实模型冒烟测试
+- [x] M2-1c：接入 AgentScope 与 DeepSeek Flash，完成发言和放逐投票的真实模型冒烟测试
 - [ ] 九个独立 AgentScope 玩家
 - [ ] 感知层和证据账本
 - [ ] 信念状态与启发式身份概率

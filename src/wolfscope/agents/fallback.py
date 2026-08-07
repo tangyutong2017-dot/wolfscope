@@ -32,7 +32,7 @@ def safe_fallback_decision(
         payload = {
             "action": "vote",
             "target": None,
-            "public_reason": "模型调用失败，本轮弃票。",
+            "reason": "模型调用失败，本轮弃票。",
             "confidence": 0.0,
         }
     else:  # pragma: no cover - protects future enum extensions

@@ -23,7 +23,10 @@ def render_decision_prompt(
         raise ValueError("requested task must match decision observation")
     task_text = {
         DecisionTask.SPEECH: "完成当前白天发言；仅在允许且确有必要时选择自爆。",
-        DecisionTask.VOTE: "从候选人中选择放逐目标；也可以提交弃票。",
+        DecisionTask.VOTE: (
+            "从 candidates 中选择放逐目标。有合理怀疑对象时应正常投票；"
+            "只有信息严重不足时才提交 target=null 弃票。"
+        ),
     }[task]
     payload = decision_input.model_dump_json(indent=2)
     return f"""当前任务：{task_text}
@@ -31,4 +34,4 @@ def render_decision_prompt(
 以下 JSON 是你获准看到的完整当前快照。事件 ID 仅在本玩家视图内有效：
 {payload}
 
-请根据指定 Schema 返回一次决策。`intent` 或 `public_reason` 只写简洁可审计依据，不要输出逐步思维过程。"""
+请根据指定 Schema 返回一次决策。`intent` 或 `reason` 只写简洁可审计依据，不要输出逐步思维过程。"""

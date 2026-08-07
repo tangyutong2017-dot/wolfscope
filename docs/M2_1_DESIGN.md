@@ -64,4 +64,6 @@ EventLog 与 `PlayerViewBuilder` 继续充当信息流权威。本阶段不引�
 
 离线部分已经完成：AgentScope DeepSeek 模型适配器会把授权快照转换成一条 system message 和一条 user message，调用框架的 structured output 接口，失败时最多进行一次格式修复。若调用方显式开启安全降级，发言会变为可审计的中性发言，投票会变为弃票；调用记录保留原失败状态并标记 `fallback_used=true`。
 
-2026-08-07 已完成一次 `deepseek-v4-flash` 单玩家发言冒烟：结构化结果首次通过，未触发格式修复或 fallback；耗时 4428 ms，输入 1335 token、输出 333 token。尚未执行投票冒烟，也尚未把发言和投票 Gateway 接入完整游戏 Provider。
+2026-08-07 已完成 `deepseek-v4-flash` 单玩家冒烟：发言结构化结果首次通过，耗时 4428 ms，输入 1335 token、输出 333 token；投票在 `(1, 7)` 对跳预言家候选中选择合法目标 7 号，首次通过，耗时 9909 ms，输入 1690 token、输出 759 token。两次调用均未触发格式修复或 fallback。
+
+投票冒烟同时显示：在正式 Evidence 账本尚未实现时，模型会自行生成 `event_id:1` 一类引用格式。混合 Provider 接入前需要明确区分玩家本地事件引用与 M2-2 Evidence ID，避免把未验证的自由字符串当作有效证据。

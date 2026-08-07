@@ -15,7 +15,12 @@ from wolfscope.models.gateway import (
     ModelGatewayError,
 )
 
-from .schemas import AgentDecisionInput, DecisionTask
+from .schemas import (
+    AgentDecisionInput,
+    DecisionTask,
+    VoteDecision,
+    VoteTaskObservation,
+)
 
 
 TModel = TypeVar("TModel", bound=BaseModel)
@@ -67,10 +72,37 @@ class PlayerRuntime:
                 )
             self.call_records.append(record)
             raise
-        self.call_records.append(result.record)
-        self.last_view_revision = view.view_revision
         if not isinstance(result.value, output_schema):
             raise TypeError("ModelGateway returned a value outside the requested schema")
+        if isinstance(result.value, VoteDecision):
+            observation = decision_input.observation
+            if not isinstance(observation, VoteTaskObservation):
+                raise TypeError("VoteDecision requires VoteTaskObservation")
+            if (
+                result.value.target is not None
+                and result.value.target not in observation.candidates
+            ):
+                self.call_records.append(
+                    result.record.model_copy(
+                        update={
+                            "success": False,
+                            "fallback_used": True,
+                            "error_type": "illegal_target",
+                            "invalid_target": result.value.target,
+                        },
+                    ),
+                )
+                self.last_view_revision = view.view_revision
+                return output_schema.model_validate(
+                    {
+                        "action": "vote",
+                        "target": None,
+                        "confidence": 0.0,
+                        "reason": "模型选择了非法候选人，本轮确定性改为弃票。",
+                    },
+                )
+        self.call_records.append(result.record)
+        self.last_view_revision = view.view_revision
         return result.value
 
 

@@ -118,6 +118,6 @@ class VoteDecision(StrictModel):
     action: Literal["vote"] = "vote"
     target: Seat | None
     confidence: Probability
-    public_reason: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
     evidence_ids: tuple[str, ...] = ()
     strategy_ids: tuple[str, ...] = ()

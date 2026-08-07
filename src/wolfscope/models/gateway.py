@@ -30,6 +30,7 @@ class ModelCallRecord(StrictModel):
     fallback_used: bool = False
     token_usage: TokenUsage = Field(default_factory=TokenUsage)
     error_type: str | None = None
+    invalid_target: Seat | None = None
 
 
 TModel = TypeVar("TModel", bound=BaseModel)

@@ -70,6 +70,20 @@ def speech_input(seat: int = 4) -> AgentDecisionInput:
     )
 
 
+def vote_input(seat: int = 4) -> AgentDecisionInput:
+    view = view_for(seat)
+    return AgentDecisionInput(
+        player_view=view,
+        public_summary=PublicGameSummary.from_view(view),
+        observation=VoteTaskObservation(
+            voter=seat,
+            vote_round=ExileVoteRound.FIRST,
+            candidates=(1, 7),
+            speeches=((1, "查杀7号"), (7, "查杀1号")),
+        ),
+    )
+
+
 class ModelConfigTests(unittest.TestCase):
     def test_test_profile_is_flash_and_production_is_pro(self) -> None:
         self.assertEqual(
@@ -130,6 +144,15 @@ class DecisionSchemaTests(unittest.TestCase):
                 intent="空发言",
                 confidence=0.5,
             )
+
+    def test_vote_uses_private_audit_reason(self) -> None:
+        decision = VoteDecision(
+            target=7,
+            confidence=0.7,
+            reason="更相信1号的查验",
+            evidence_ids=("1",),
+        )
+        self.assertEqual(decision.reason, "更相信1号的查验")
 
 
 class FakeGatewayAndRuntimeTests(unittest.IsolatedAsyncioTestCase):
@@ -192,6 +215,55 @@ class FakeGatewayAndRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("4号", decision.speech or "")
         self.assertTrue(runtime.call_records[0].fallback_used)
         self.assertFalse(runtime.call_records[0].success)
+
+    async def test_illegal_vote_target_becomes_audited_abstention(self) -> None:
+        gateway = FakeModelGateway(
+            [
+                {
+                    "action": "vote",
+                    "target": 6,
+                    "confidence": 0.8,
+                    "reason": "错误地选择场外玩家",
+                },
+            ],
+        )
+        runtime = PlayerRuntime(4, model_config_for(ModelProfile.TEST), gateway)
+
+        decision = await runtime.decide(
+            task=DecisionTask.VOTE,
+            decision_input=vote_input(),
+            output_schema=VoteDecision,
+        )
+
+        self.assertIsNone(decision.target)
+        record = runtime.call_records[0]
+        self.assertFalse(record.success)
+        self.assertTrue(record.fallback_used)
+        self.assertEqual(record.error_type, "illegal_target")
+        self.assertEqual(record.invalid_target, 6)
+
+    async def test_legal_vote_target_is_preserved(self) -> None:
+        gateway = FakeModelGateway(
+            [
+                {
+                    "action": "vote",
+                    "target": 7,
+                    "confidence": 0.8,
+                    "reason": "选择合法候选人",
+                },
+            ],
+        )
+        runtime = PlayerRuntime(4, model_config_for(ModelProfile.TEST), gateway)
+
+        decision = await runtime.decide(
+            task=DecisionTask.VOTE,
+            decision_input=vote_input(),
+            output_schema=VoteDecision,
+        )
+
+        self.assertEqual(decision.target, 7)
+        self.assertTrue(runtime.call_records[0].success)
+        self.assertFalse(runtime.call_records[0].fallback_used)
 
     async def test_runtime_registry_creates_nine_isolated_seats(self) -> None:
         gateways: dict[int, FakeModelGateway] = {}
