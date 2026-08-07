@@ -8,7 +8,7 @@ from typing import Annotated, Literal
 from pydantic import ConfigDict, Field, model_validator
 
 from wolfscope.contracts import Seat, StrictModel
-from wolfscope.game.types import Camp, RoleType
+from wolfscope.game.types import RoleType
 
 
 class ClaimModel(StrictModel):
@@ -34,6 +34,13 @@ class VoteIntentType(StrEnum):
     AVOID = "avoid"
 
 
+class ClaimAlignment(StrEnum):
+    """Alignment language in public claims, independent from Engine Camp."""
+
+    GOOD = "good"
+    WEREWOLF = "werewolf"
+
+
 class ClaimBase(ClaimModel):
     summary: str = Field(min_length=1, max_length=60)
     supporting_text: str = Field(min_length=1, max_length=80)
@@ -50,13 +57,13 @@ class CheckClaim(ClaimBase):
     kind: Literal["check_claim"] = "check_claim"
     target: Seat
     night: int = Field(ge=1)
-    result: Camp
+    result: ClaimAlignment
 
 
 class AlignmentClaim(ClaimBase):
     kind: Literal["alignment_claim"] = "alignment_claim"
     target: Seat
-    alignment: Camp
+    alignment: ClaimAlignment
     polarity: ClaimPolarity
 
 
@@ -130,6 +137,8 @@ class SpeechExtractionItem(ClaimModel):
 class SpeechClaimExtraction(ClaimModel):
     item_id: str = Field(min_length=1)
     claims: tuple[PublicClaim, ...] = Field(default=(), max_length=8)
+    rejected_claims: int = Field(default=0, ge=0)
+    rejection_reasons: tuple[str, ...] = ()
 
 
 class SpeechExtractionBatch(ClaimModel):

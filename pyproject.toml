@@ -16,6 +16,7 @@ dependencies = [
 [project.scripts]
 wolfscope-m1 = "wolfscope.cli:main"
 wolfscope-smoke = "wolfscope.live_smoke:main"
+wolfscope-validate-claims = "wolfscope.evaluation.claim_dataset:main"
 
 [project.optional-dependencies]
 dev = []

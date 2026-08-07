@@ -242,15 +242,25 @@ async def run_claim_extraction() -> dict:
     items = await extractor.extract(
         (
             SpeechExtractionItem(
-                item_id="speech-1",
+                item_id="good-alignment",
+                day=1,
+                speaker=8,
+                speech_context="day_speech",
+                text="我是8号，一个好人身份。",
+            ),
+            SpeechExtractionItem(
+                item_id="villager-role",
+                day=1,
+                speaker=6,
+                speech_context="day_speech",
+                text="我是6号，普通村民。",
+            ),
+            SpeechExtractionItem(
+                item_id="good-check",
                 day=1,
                 speaker=7,
                 speech_context="day_speech",
-                text=(
-                    "我是7号预言家，昨夜查验1号是狼人。"
-                    "今天请大家把票投给1号；如果后面有人对跳，"
-                    "再比较双方发言。"
-                ),
+                text="我是7号预言家，昨夜查验3号是好人。",
             ),
         ),
     )

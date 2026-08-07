@@ -162,10 +162,11 @@ class EvidencePipeline:
                     failure_reason="extractor_failure",
                 )
             else:
-                accepted, rejection_reasons = _validated_claims(item, output.claims)
+                accepted, local_rejections = _validated_claims(item, output.claims)
+                rejection_reasons = output.rejection_reasons + local_rejections
                 status = (
                     ExtractionStatus.PARTIAL
-                    if rejection_reasons
+                    if output.rejected_claims or rejection_reasons
                     else ExtractionStatus.SUCCESS
                 )
                 annotation = PublicSpeechAnnotation(
@@ -175,7 +176,7 @@ class EvidencePipeline:
                     extractor_version=self.extractor.version,
                     status=status,
                     claims=accepted,
-                    rejected_claims=len(rejection_reasons),
+                    rejected_claims=output.rejected_claims + len(local_rejections),
                     rejection_reasons=rejection_reasons,
                 )
             self.cache.put(annotation)

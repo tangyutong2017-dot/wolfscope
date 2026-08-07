@@ -4,9 +4,6 @@ import unittest
 from dataclasses import dataclass
 from typing import Any
 
-from pydantic import ValidationError
-
-from wolfscope.cognition.claims import SpeechExtractionBatch
 from wolfscope.cognition.claims import SpeechExtractionItem
 from wolfscope.cognition.extraction import PublicClaimExtractorError
 from wolfscope.models.claim_extractor import AgentScopePublicClaimExtractor
@@ -141,15 +138,23 @@ class AgentScopePublicClaimExtractorTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(trace.failure_reason, "schema_validation")
         self.assertEqual(len(trace.attempts), 2)
 
-    async def test_schema_failure_records_sanitized_field_diagnostics(self) -> None:
-        def invalid_claim_error() -> ValidationError:
-            try:
-                SpeechExtractionBatch.model_validate(
-                    {
+    async def test_invalid_claim_is_dropped_without_losing_valid_claims(self) -> None:
+        model = StubStructuredModel(
+            [
+                StubResponse(
+                    content={
                         "items": [
                             {
                                 "item_id": "speech-1",
                                 "claims": [
+                                    {
+                                        "kind": "role_claim",
+                                        "subject": 7,
+                                        "role": "seer",
+                                        "polarity": "assert",
+                                        "summary": "7号声称预言家",
+                                        "supporting_text": "我是7号预言家",
+                                    },
                                     {
                                         "kind": "check_claim",
                                         "target": 1,
@@ -162,21 +167,26 @@ class AgentScopePublicClaimExtractorTests(unittest.IsolatedAsyncioTestCase):
                             },
                         ],
                     },
-                )
-            except ValidationError as error:
-                return error
-            raise AssertionError("expected validation error")
-
-        model = StubStructuredModel([invalid_claim_error(), invalid_claim_error()])
+                    usage=StubUsage(input_tokens=300, output_tokens=100),
+                ),
+            ],
+        )
         extractor = AgentScopePublicClaimExtractor(
             model,
             model_config_for(ModelProfile.TEST),
         )
 
-        with self.assertRaises(PublicClaimExtractorError):
-            await extractor.extract(public_item())
+        result = await extractor.extract(public_item())
 
-        issues = extractor.traces[0].attempts[0].validation_issues
+        self.assertEqual(len(result[0].claims), 1)
+        self.assertEqual(result[0].claims[0].kind, "role_claim")
+        self.assertGreaterEqual(result[0].rejected_claims, 1)
+        trace = extractor.traces[0]
+        self.assertTrue(trace.success)
+        self.assertEqual(trace.accepted_claims, 1)
+        self.assertGreaterEqual(trace.rejected_claims, 1)
+        self.assertEqual(len(model.calls), 1)
+        issues = trace.attempts[0].validation_issues
         self.assertGreaterEqual(len(issues), 2)
         self.assertTrue(any("night" in issue.location for issue in issues))
         self.assertTrue(any("summary" in issue.location for issue in issues))

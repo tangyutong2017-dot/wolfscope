@@ -9,11 +9,11 @@ from typing import Any
 from agentscope.credential import DeepSeekCredential
 from agentscope.message import SystemMsg, UserMsg
 from agentscope.model import DeepSeekChatModel
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
 from wolfscope.cognition.claims import (
+    PublicClaim,
     SpeechClaimExtraction,
-    SpeechExtractionBatch,
     SpeechExtractionItem,
 )
 from wolfscope.cognition.extraction import PublicClaimExtractorError
@@ -30,8 +30,17 @@ EXTRACTION_SYSTEM_PROMPT = """你是狼人杀公开发言的文本解析器，�
 你只能抽取原文明确表达的内容，不得判断真假、推断身份、补充隐含信息或提供策略。
 speaker 已由系统给出，不得改变发言者归属。
 只抽取直接身份声称、本人查验声称、明确阵营判断、站边态度、本人投票意图和对他人的投票建议。
+Claim 字段必须遵守以下契约，所有 kind 和枚举值必须使用列出的英文值：
+- role_claim: kind, summary, supporting_text, subject, role, polarity；role 只能是 werewolf/villager/seer/witch/hunter，polarity 只能是 assert/deny。
+- check_claim: kind, summary, supporting_text, target, night, result；result 只能是 werewolf/good。
+- alignment_claim: kind, summary, supporting_text, target, alignment, polarity；alignment 只能是 werewolf/good。
+- stance_claim: kind, summary, supporting_text, target, stance；stance 只能是 support/oppose/trust/distrust/suspect/neutral。
+- vote_intent: kind, summary, supporting_text, target, intent, conditional, condition；intent 只能是 vote/avoid。
+- vote_recommendation: kind, summary, supporting_text, target, conditional, condition。
 他人转述不能变成当前 speaker 自己的查验。
 supporting_text 必须逐字取自对应发言原文，不得改写。
+“好人身份”只表示阵营，应提取 alignment_claim(alignment=good)，不得提取为普通村民身份；
+只有明确说“普通村民/平民/村民”时，才能提取 role_claim(role=villager)。
 投票意图或投票建议的 supporting_text 必须在同一段原文中同时明确写出投票/放逐动作和目标座位；
 不得从前一句继承目标，也不得把“再比较发言、继续观察、听完再定”等普通条件讨论单独标成投票 Claim。
 每段发言最多提取8条最明确、互不重复的 Claim；summary 不超过60字，supporting_text 不超过80字。
@@ -52,6 +61,8 @@ class ValidationIssue(BaseModel):
 
 class ExtractionAttemptRecord(ModelAttemptRecord):
     validation_issues: tuple[ValidationIssue, ...] = ()
+    accepted_claims: int = Field(default=0, ge=0)
+    rejected_claims: int = Field(default=0, ge=0)
 
 
 class ExtractionTrace(BaseModel):
@@ -68,6 +79,8 @@ class ExtractionTrace(BaseModel):
     retry_count: int = Field(ge=0)
     token_usage: TokenUsage = Field(default_factory=TokenUsage)
     failure_reason: str | None = None
+    accepted_claims: int = Field(default=0, ge=0)
+    rejected_claims: int = Field(default=0, ge=0)
     attempts: tuple[ExtractionAttemptRecord, ...] = ()
 
 
@@ -143,16 +156,16 @@ class AgentScopePublicClaimExtractor:
                         name="extractor_validator",
                         content=(
                             "上一次结果未通过结构化校验。请只按 "
-                            "SpeechExtractionBatch Schema 重新提交文本解析结果。"
+                            "SpeechExtractionTransport Schema 重新提交文本解析结果。"
                         ),
                     ),
                 )
             try:
                 response = await self._model.generate_structured_output(
                     call_messages,
-                    SpeechExtractionBatch,
+                    SpeechExtractionTransport,
                 )
-                batch = SpeechExtractionBatch.model_validate(response.content)
+                transport = SpeechExtractionTransport.model_validate(response.content)
             except (RuntimeError, ValueError) as error:
                 attempt_records.append(
                     ExtractionAttemptRecord(
@@ -194,6 +207,9 @@ class AgentScopePublicClaimExtractor:
                     "public claim extractor request failed",
                 ) from error
             usage = _usage(response)
+            batch, claim_issues = _validate_claims_individually(transport, items)
+            accepted_claims = sum(len(item.claims) for item in batch)
+            rejected_claims = sum(item.rejected_claims for item in batch)
             attempt_records.append(
                 ExtractionAttemptRecord(
                     attempt_index=attempt + 1,
@@ -201,6 +217,9 @@ class AgentScopePublicClaimExtractor:
                     success=True,
                     latency_ms=_elapsed_ms(attempt_started),
                     token_usage=usage,
+                    validation_issues=claim_issues,
+                    accepted_claims=accepted_claims,
+                    rejected_claims=rejected_claims,
                 ),
             )
             self.traces.append(
@@ -215,10 +234,12 @@ class AgentScopePublicClaimExtractor:
                     latency_ms=_elapsed_ms(started),
                     retry_count=attempt,
                     token_usage=usage,
+                    accepted_claims=accepted_claims,
+                    rejected_claims=rejected_claims,
                     attempts=tuple(attempt_records),
                 ),
             )
-            return batch.items
+            return batch
 
         reason = attempt_records[-1].failure_reason
         self.traces.append(
@@ -244,6 +265,102 @@ class SpeechExtractionRequest(BaseModel):
     items: tuple[SpeechExtractionItem, ...]
 
 
+class PublicClaimTransport(BaseModel):
+    """Known claim keys with deliberately loose values at the API boundary."""
+
+    model_config = ConfigDict(extra="allow", frozen=True)
+
+    kind: Any = Field(
+        default=None,
+        description="One of role_claim, check_claim, alignment_claim, stance_claim, vote_intent, vote_recommendation",
+    )
+    summary: Any = Field(default=None, description="Required concise Chinese summary, at most 60 characters")
+    supporting_text: Any = Field(default=None, description="Required exact quote from speech, at most 80 characters")
+    subject: Any = Field(default=None, description="Seat number for role_claim")
+    role: Any = Field(default=None, description="werewolf, villager, seer, witch, or hunter")
+    polarity: Any = Field(default=None, description="assert or deny")
+    target: Any = Field(default=None, description="Target seat number")
+    night: Any = Field(default=None, description="Positive night number for check_claim")
+    result: Any = Field(default=None, description="werewolf or good")
+    alignment: Any = Field(default=None, description="werewolf or good")
+    stance: Any = Field(default=None, description="support, oppose, trust, distrust, suspect, or neutral")
+    conditional: Any = Field(default=None, description="Boolean; whether vote statement has an explicit condition")
+    condition: Any = Field(default=None, description="Explicit condition text, required only when conditional is true")
+    intent: Any = Field(default=None, description="vote or avoid; only for vote_intent")
+
+
+class SpeechClaimTransport(BaseModel):
+    """Loose envelope; semantic validation happens claim by claim locally."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    item_id: str = Field(min_length=1)
+    claims: tuple[PublicClaimTransport, ...] = ()
+
+
+class SpeechExtractionTransport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    items: tuple[SpeechClaimTransport, ...]
+
+
+_PUBLIC_CLAIM_ADAPTER = TypeAdapter(PublicClaim)
+
+
+def _validate_claims_individually(
+    transport: SpeechExtractionTransport,
+    requested_items: tuple[SpeechExtractionItem, ...],
+) -> tuple[tuple[SpeechClaimExtraction, ...], tuple[ValidationIssue, ...]]:
+    requested_ids = [item.item_id for item in requested_items]
+    returned_ids = [item.item_id for item in transport.items]
+    if len(returned_ids) != len(set(returned_ids)):
+        raise ValueError("duplicate item_id in extraction transport")
+    if set(returned_ids) != set(requested_ids):
+        raise ValueError("extraction transport item_ids do not match request")
+
+    by_id = {item.item_id: item for item in transport.items}
+    outputs: list[SpeechClaimExtraction] = []
+    all_issues: list[ValidationIssue] = []
+    for requested in requested_items:
+        raw_claims = by_id[requested.item_id].claims
+        accepted: list[PublicClaim] = []
+        item_issues: list[ValidationIssue] = []
+        rejected_claim_count = 0
+        for claim_index, claim_transport in enumerate(raw_claims):
+            raw_claim = claim_transport.model_dump(exclude_none=True)
+            if claim_index >= 8:
+                rejected_claim_count += 1
+                item_issues.append(
+                    ValidationIssue(
+                        location=("items", requested.item_id, "claims", claim_index),
+                        error_type="too_many_claims",
+                        message="only the first 8 claims are eligible for validation",
+                        rejected_input=_safe_input_summary(raw_claim),
+                    ),
+                )
+                continue
+            try:
+                accepted.append(_PUBLIC_CLAIM_ADAPTER.validate_python(raw_claim))
+            except ValidationError as error:
+                rejected_claim_count += 1
+                item_issues.extend(
+                    _validation_issues(
+                        error,
+                        prefix=("items", requested.item_id, "claims", claim_index),
+                    ),
+                )
+        all_issues.extend(item_issues)
+        outputs.append(
+            SpeechClaimExtraction(
+                item_id=requested.item_id,
+                claims=tuple(accepted),
+                rejected_claims=rejected_claim_count,
+                rejection_reasons=tuple(issue.error_type for issue in item_issues),
+            ),
+        )
+    return tuple(outputs), tuple(all_issues)
+
+
 def _usage(response: Any) -> TokenUsage:
     usage = getattr(response, "usage", None)
     return TokenUsage(
@@ -265,7 +382,11 @@ def _failure_reason(error: Exception) -> str:
     return "schema_validation"
 
 
-def _validation_issues(error: Exception) -> tuple[ValidationIssue, ...]:
+def _validation_issues(
+    error: Exception,
+    *,
+    prefix: tuple[str | int, ...] = (),
+) -> tuple[ValidationIssue, ...]:
     """Extract bounded Pydantic diagnostics without retaining raw responses."""
 
     validation_error = _find_validation_error(error)
@@ -275,7 +396,7 @@ def _validation_issues(error: Exception) -> tuple[ValidationIssue, ...]:
     for detail in validation_error.errors(include_url=False):
         issues.append(
             ValidationIssue(
-                location=tuple(detail.get("loc", ())),
+                location=prefix + tuple(detail.get("loc", ())),
                 error_type=str(detail.get("type", "validation_error")),
                 message=_bounded_text(detail.get("msg", "validation failed"), 240),
                 rejected_input=_safe_input_summary(detail.get("input")),

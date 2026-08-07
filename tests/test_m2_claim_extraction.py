@@ -5,7 +5,9 @@ import unittest
 from pydantic import ValidationError
 
 from wolfscope.cognition.claims import (
+    AlignmentClaim,
     CheckClaim,
+    ClaimAlignment,
     ClaimPolarity,
     RoleClaim,
     SpeechClaimExtraction,
@@ -70,6 +72,25 @@ def pipeline_for(
 
 
 class PublicClaimSchemaTests(unittest.TestCase):
+    def test_good_alignment_is_distinct_from_villager_role(self) -> None:
+        claim = AlignmentClaim(
+            target=8,
+            alignment=ClaimAlignment.GOOD,
+            polarity=ClaimPolarity.ASSERT,
+            summary="8号声称自己是好人",
+            supporting_text="我是8号，一个好人身份",
+        )
+
+        self.assertIs(claim.alignment, ClaimAlignment.GOOD)
+        with self.assertRaises(ValidationError):
+            AlignmentClaim(
+                target=8,
+                alignment="villager",
+                polarity=ClaimPolarity.ASSERT,
+                summary="错误地把村民当作阵营",
+                supporting_text="我是8号，一个好人身份",
+            )
+
     def test_conditional_vote_requires_condition(self) -> None:
         with self.assertRaises(ValidationError):
             VoteIntentClaim(
@@ -206,6 +227,39 @@ class EvidencePipelineTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(
             any(isinstance(record.content, RawSpeech) for record in ledgers.get(4).records),
         )
+
+    async def test_adapter_rejections_mark_cached_annotation_partial(self) -> None:
+        text = "我是7号预言家。"
+        state, events = state_and_events((7, text))
+        extractor = FakePublicClaimExtractor(
+            [
+                (
+                    SpeechClaimExtraction(
+                        item_id="speech-1",
+                        claims=(
+                            RoleClaim(
+                                subject=7,
+                                role=RoleType.SEER,
+                                polarity=ClaimPolarity.ASSERT,
+                                summary="有效身份声称",
+                                supporting_text="我是7号预言家",
+                            ),
+                        ),
+                        rejected_claims=1,
+                        rejection_reasons=("value_error",),
+                    ),
+                ),
+            ],
+        )
+        pipeline, builder, _ = pipeline_for(state, events, extractor)
+
+        await pipeline.sync(builder.build(4))
+
+        annotation = pipeline.cache.values[0]
+        self.assertIs(annotation.status, ExtractionStatus.PARTIAL)
+        self.assertEqual(annotation.rejected_claims, 1)
+        self.assertEqual(annotation.rejection_reasons, ("value_error",))
+        self.assertEqual(len(annotation.claims), 1)
 
     async def test_extractor_failure_is_cached_and_raw_speech_survives(self) -> None:
         state, events = state_and_events((7, "7号暂时没有额外信息。"))
