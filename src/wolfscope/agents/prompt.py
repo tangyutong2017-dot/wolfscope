@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import json
 
-from wolfscope.agents.schemas import AgentDecisionInput, DecisionTask
+from wolfscope.agents.schemas import (
+    AgentDecisionInput,
+    DecisionTask,
+    VoteContextMode,
+)
 
 
 SYSTEM_PROMPT = """你正在参加一局标准九人狼人杀。
@@ -33,10 +37,15 @@ def render_decision_prompt(
             "只有信息严重不足时才提交 target=null 弃票。"
         ),
     }[task]
-    payload = decision_input.model_dump(
-        mode="json",
-        exclude={"player_view": {"visible_events"}},
-    )
+    exclude: dict = {"player_view": {"visible_events"}}
+    if decision_input.vote_context_mode in {
+        VoteContextMode.BALANCED,
+        VoteContextMode.COMPACT,
+    }:
+        exclude["evidence_context"] = {"public_claims"}
+    if decision_input.vote_context_mode is VoteContextMode.COMPACT:
+        exclude["observation"] = {"speeches"}
+    payload = decision_input.model_dump(mode="json", exclude=exclude)
     rendered_payload = json.dumps(payload, ensure_ascii=False, indent=2)
     return f"""当前任务：{task_text}
 

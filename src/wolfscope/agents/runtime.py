@@ -105,8 +105,7 @@ class PlayerRuntime:
             record = record.model_copy(
                 update={"invalid_event_ids": invalid_event_ids},
             )
-        context = decision_input.evidence_context
-        valid_evidence_ids = set(context.evidence_ids if context is not None else ())
+        valid_evidence_ids = set(decision_input.available_evidence_ids)
         submitted_evidence_ids = tuple(getattr(decision, "evidence_ids", ()))
         invalid_evidence_ids = tuple(
             evidence_id

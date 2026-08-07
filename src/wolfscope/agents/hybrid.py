@@ -12,6 +12,7 @@ from wolfscope.agents.schemas import (
     SpeechDecision,
     SpeechTaskObservation,
     VoteDecision,
+    VoteContextMode,
     VoteTaskObservation,
 )
 from wolfscope.game.day import DayTurnAction
@@ -37,6 +38,7 @@ class HybridProvider:
         evidence_pipeline: EvidencePipeline | None = None,
         evidence_context_builder: EvidenceContextBuilder | None = None,
         decision_brief_builder: DecisionBriefBuilder | None = None,
+        vote_context_mode: VoteContextMode = VoteContextMode.FULL,
     ) -> None:
         self.view_builder = view_builder
         self.runtimes = runtimes
@@ -46,6 +48,7 @@ class HybridProvider:
             evidence_context_builder or EvidenceContextBuilder()
         )
         self.decision_brief_builder = decision_brief_builder or DecisionBriefBuilder()
+        self.vote_context_mode = vote_context_mode
 
     async def take_day_turn(self, observation) -> DayTurnAction:
         decision_input = await self._input(
@@ -114,6 +117,11 @@ class HybridProvider:
             observation=observation,
             evidence_context=evidence_context,
             decision_brief=decision_brief,
+            vote_context_mode=(
+                self.vote_context_mode
+                if isinstance(observation, VoteTaskObservation)
+                else VoteContextMode.FULL
+            ),
         )
 
     async def choose_wolf_target(self, observation):

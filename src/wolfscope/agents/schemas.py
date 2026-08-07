@@ -22,6 +22,12 @@ class DecisionTask(StrEnum):
     VOTE = "vote"
 
 
+class VoteContextMode(StrEnum):
+    FULL = "full"
+    BALANCED = "balanced"
+    COMPACT = "compact"
+
+
 class PublicGameSummary(StrictModel):
     alive_seats: tuple[Seat, ...]
     dead_seats: tuple[Seat, ...]
@@ -85,6 +91,7 @@ class AgentDecisionInput(StrictModel):
     observation: TaskObservation
     evidence_context: EvidenceContext | None = None
     decision_brief: DecisionBrief | None = None
+    vote_context_mode: VoteContextMode = VoteContextMode.FULL
 
     @model_validator(mode="after")
     def actor_matches_viewer(self) -> AgentDecisionInput:
@@ -123,7 +130,32 @@ class AgentDecisionInput(StrictModel):
                 != self.evidence_context.ledger_revision
             ):
                 raise ValueError("decision_brief and evidence_context revisions must match")
+        if (
+            not isinstance(self.observation, VoteTaskObservation)
+            and self.vote_context_mode is not VoteContextMode.FULL
+        ):
+            raise ValueError("non-full vote context mode is only valid for vote tasks")
         return self
+
+    @property
+    def available_evidence_ids(self) -> tuple[str, ...]:
+        if self.evidence_context is None:
+            return ()
+        if self.vote_context_mode is VoteContextMode.FULL:
+            return self.evidence_context.evidence_ids
+        hard_ids = tuple(
+            item.evidence_id
+            for item in (
+                self.evidence_context.verified_facts
+                + self.evidence_context.rule_derivations
+            )
+        )
+        brief_ids = (
+            self.decision_brief.evidence_ids
+            if self.decision_brief is not None
+            else ()
+        )
+        return tuple(dict.fromkeys(hard_ids + brief_ids))
 
 
 class SpeechDecision(StrictModel):

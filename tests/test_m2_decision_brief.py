@@ -3,11 +3,13 @@ from __future__ import annotations
 import unittest
 
 from wolfscope.agents.runtime import PlayerRuntime
+from wolfscope.agents.prompt import render_decision_prompt
 from wolfscope.agents.schemas import (
     AgentDecisionInput,
     DecisionTask,
     PublicGameSummary,
     VoteDecision,
+    VoteContextMode,
     VoteTaskObservation,
 )
 from wolfscope.cognition.brief import DecisionBriefBuilder
@@ -223,6 +225,79 @@ class DecisionBriefTraceTests(unittest.IsolatedAsyncioTestCase):
         trace = runtime.call_records[0]
         self.assertEqual(trace.accepted_brief_evidence_ids, (claim_record.evidence_id,))
         self.assertEqual(trace.accepted_context_only_evidence_ids, (context_only_id,))
+
+    async def test_vote_context_modes_control_rendering_and_hidden_claim_ids(self) -> None:
+        events = EventLog()
+        speech = events.emit(
+            day=1, phase=Phase.DAY_SPEECH, event_type="day_speech",
+            visibility=Visibility.PUBLIC, actor=8,
+            content="独特原始措辞：我怀疑9号",
+        )
+        view = PlayerViewBuilder(game_state(), events).build(4)
+        ledger = EvidenceLedger(owner=4)
+        ledger.sync(view)
+        hidden_record = ledger.ingest_public_claims(
+            event=speech, speaker=8,
+            claims=(StanceClaim(target=9, stance="suspect", summary="8号怀疑9号", supporting_text="我怀疑9号"),),
+            extractor_version="test",
+        )[0]
+        context = EvidenceContextBuilder().build(ledger)
+        brief = DecisionBriefBuilder().build(ledger, day=1, candidates=(1, 7))
+        base = AgentDecisionInput(
+            player_view=view,
+            public_summary=PublicGameSummary.from_view(view),
+            observation=VoteTaskObservation(
+                voter=4,
+                vote_round=ExileVoteRound.FIRST,
+                candidates=(1, 7),
+                speeches=((8, "独特原始措辞：我怀疑9号"),),
+            ),
+            evidence_context=context,
+            decision_brief=brief,
+        )
+        full_prompt = render_decision_prompt(base, DecisionTask.VOTE)
+        balanced_input = base.model_copy(
+            update={"vote_context_mode": VoteContextMode.BALANCED},
+        )
+        balanced_prompt = render_decision_prompt(
+            balanced_input,
+            DecisionTask.VOTE,
+        )
+        compact_prompt = render_decision_prompt(
+            base.model_copy(update={"vote_context_mode": VoteContextMode.COMPACT}),
+            DecisionTask.VOTE,
+        )
+
+        self.assertIn("独特原始措辞", full_prompt)
+        self.assertIn('"public_claims"', full_prompt)
+        self.assertIn("独特原始措辞", balanced_prompt)
+        self.assertNotIn('"public_claims"', balanced_prompt)
+        self.assertNotIn("独特原始措辞", compact_prompt)
+        self.assertNotIn('"public_claims"', compact_prompt)
+
+        runtime = PlayerRuntime(
+            4,
+            model_config_for(ModelProfile.TEST),
+            FakeModelGateway([
+                VoteDecision(
+                    target=1,
+                    confidence=0.5,
+                    reason="测试隐藏引用",
+                    evidence_ids=(hidden_record.evidence_id,),
+                ),
+            ]),
+        )
+        decision = await runtime.decide(
+            task=DecisionTask.VOTE,
+            decision_input=balanced_input,
+            output_schema=VoteDecision,
+        )
+
+        self.assertEqual(decision.evidence_ids, ())
+        self.assertEqual(
+            runtime.call_records[0].invalid_evidence_ids,
+            (hidden_record.evidence_id,),
+        )
 
 
 if __name__ == "__main__":

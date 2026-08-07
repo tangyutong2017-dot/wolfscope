@@ -17,6 +17,7 @@ from wolfscope.agents.schemas import (
     SpeechTaskObservation,
     VoteDecision,
     VoteTaskObservation,
+    VoteContextMode,
 )
 from wolfscope.agents.support import DeterministicSupportProvider
 from wolfscope.cognition.claims import SpeechExtractionItem
@@ -208,7 +209,9 @@ async def run_vote() -> dict:
     }
 
 
-async def run_hybrid_day() -> dict:
+async def run_hybrid_day(
+    vote_context_mode: VoteContextMode = VoteContextMode.FULL,
+) -> dict:
     config = model_config_for(ModelProfile.TEST)
     state = GameState(
         seed=42,
@@ -236,6 +239,7 @@ async def run_hybrid_day() -> dict:
             extractor=claim_extractor,
             source_resolver=view_builder,
         ),
+        vote_context_mode=vote_context_mode,
     )
     result = await GameEngine(
         state,
@@ -252,6 +256,7 @@ async def run_hybrid_day() -> dict:
     extraction_records = claim_extractor.traces
     return {
         "game_id": result.game_id,
+        "vote_context_mode": vote_context_mode.value,
         "status": result.status.value,
         "winner": result.winner.value if result.winner else None,
         "win_reason": result.win_reason.value if result.win_reason else None,
@@ -360,6 +365,12 @@ def main() -> None:
             "claim-extraction",
         ),
     )
+    parser.add_argument(
+        "--vote-context-mode",
+        choices=tuple(mode.value for mode in VoteContextMode),
+        default=VoteContextMode.FULL.value,
+        help="投票Prompt上下文模式；只影响 hybrid-day",
+    )
     args = parser.parse_args()
     if args.scenario == "speech":
         print(json.dumps(asyncio.run(run_speech()), ensure_ascii=False, indent=2))
@@ -374,7 +385,15 @@ def main() -> None:
     elif args.scenario == "vote":
         print(json.dumps(asyncio.run(run_vote()), ensure_ascii=False, indent=2))
     elif args.scenario == "hybrid-day":
-        print(json.dumps(asyncio.run(run_hybrid_day()), ensure_ascii=False, indent=2))
+        print(
+            json.dumps(
+                asyncio.run(
+                    run_hybrid_day(VoteContextMode(args.vote_context_mode)),
+                ),
+                ensure_ascii=False,
+                indent=2,
+            ),
+        )
     elif args.scenario == "claim-extraction":
         print(
             json.dumps(
