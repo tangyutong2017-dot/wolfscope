@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from wolfscope.agents.runtime import PlayerRuntimeRegistry
 from wolfscope.agents.schemas import (
     AgentDecisionInput,
@@ -17,6 +19,9 @@ from wolfscope.player_view import PlayerViewBuilder
 
 from .support import DeterministicSupportProvider
 
+if TYPE_CHECKING:
+    from wolfscope.cognition.extraction import EvidencePipeline
+
 
 class HybridProvider:
     """Route speech/votes to agents and all remaining actions to support."""
@@ -27,13 +32,15 @@ class HybridProvider:
         view_builder: PlayerViewBuilder,
         runtimes: PlayerRuntimeRegistry,
         support: DeterministicSupportProvider,
+        evidence_pipeline: EvidencePipeline | None = None,
     ) -> None:
         self.view_builder = view_builder
         self.runtimes = runtimes
         self.support = support
+        self.evidence_pipeline = evidence_pipeline
 
     async def take_day_turn(self, observation) -> DayTurnAction:
-        decision_input = self._input(
+        decision_input = await self._input(
             observation.actor,
             SpeechTaskObservation.from_domain(observation),
         )
@@ -61,7 +68,7 @@ class HybridProvider:
         return DayTurnAction.speak(decision.speech)
 
     async def choose_exile_vote(self, observation) -> int | None:
-        decision_input = self._input(
+        decision_input = await self._input(
             observation.voter,
             VoteTaskObservation.from_domain(observation),
         )
@@ -73,8 +80,10 @@ class HybridProvider:
         )
         return decision.target
 
-    def _input(self, seat: int, observation) -> AgentDecisionInput:
+    async def _input(self, seat: int, observation) -> AgentDecisionInput:
         view = self.view_builder.build(seat)
+        if self.evidence_pipeline is not None:
+            await self.evidence_pipeline.sync(view)
         return AgentDecisionInput(
             player_view=view,
             public_summary=PublicGameSummary.from_view(view),

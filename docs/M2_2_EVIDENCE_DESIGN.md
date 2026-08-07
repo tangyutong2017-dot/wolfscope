@@ -54,4 +54,12 @@ M2-2b 离线部分也已完成：`RoleClaim`、`CheckClaim`、`AlignmentClaim`�
 
 `EvidencePipeline` 会批量提取当前尚未缓存的公开发言，并以服务端源事件 ID 建立不可变 `PublicSpeechAnnotation` 缓存。不同玩家即使因为私人事件拥有不同的本地 Event ID，也只触发一次公共提取；分发后仍使用各自本地 Event ID 和 Evidence ID。提取器失败会缓存脱敏失败状态，RawSpeech 永远保留且 Engine 不受阻塞。
 
-当前使用 Fake Extractor 完成离线验证，尚未实现真实 AgentScope 公共语义提取器，也尚未把 Pipeline 接入 HybridProvider 的决策前同步。
+AgentScope 公共语义提取器已经实现并接入 HybridProvider 的可选决策前同步。提取 Prompt 只接收 `item_id`、天数、发言者、发言场景和公开原文，明确禁止判断真假、推断身份、补全隐含信息、处理策略或把转述变成发言者本人的查验。输出只允许六类 Claim，并要求 `supporting_text` 逐字来自原文。
+
+提取调用拥有独立的模型、token、延迟、格式修复和脱敏失败追踪；一次结构化修复仍失败时，Pipeline 缓存失败状态并继续使用 RawSpeech。Fake/Stub 已验证完整单日混合局在每条公开话语上只提取一次：首夜遗言一次、八名存活玩家白天发言八次，共九个缓存条目。
+
+2026-08-07 已完成一次 `deepseek-v4-flash` 真实 Claim 提取冒烟。输入只包含7号的一段公开发言，模型首次结构化通过，耗时4044 ms，输入2285 token、输出436 token。结果正确生成 `RoleClaim`、`CheckClaim` 和 `VoteRecommendationClaim`；“请大家投1号”没有被误标为发言者本人的 `VoteIntentClaim`，也没有产生真假判断或额外身份推断。所有 `supporting_text` 均可在原文中定位。
+
+首次完整 Agent+Evidence 单日 API 测试中，16/16 次玩家决策成功，但公开文本解析仅4/9次成功。第4次成功解析的输出恰好达到原配置的1200 token，后五次长发言均在生成和格式修复阶段报告 `missing_structured_output`，说明思考输出与 Claim 数量耗尽了结构化 tool call 的输出预算。
+
+解析器已针对“只做文本解析”的任务改为非思考模式，温度固定为0，最大输出提高到2000 token；每段最多8条互不重复的 Claim，summary 最长60字，supporting_text 最长80字。玩家决策仍保留原思考配置，模型选择策略也没有改变：开发使用 Flash，正式实验使用 Pro。

@@ -35,8 +35,8 @@ class VoteIntentType(StrEnum):
 
 
 class ClaimBase(ClaimModel):
-    summary: str = Field(min_length=1)
-    supporting_text: str = Field(min_length=1)
+    summary: str = Field(min_length=1, max_length=60)
+    supporting_text: str = Field(min_length=1, max_length=80)
 
 
 class RoleClaim(ClaimBase):
@@ -69,7 +69,7 @@ class StanceClaim(ClaimBase):
 class VoteClaimBase(ClaimBase):
     target: Seat
     conditional: bool = False
-    condition: str | None = None
+    condition: str | None = Field(default=None, max_length=120)
 
     @model_validator(mode="after")
     def condition_is_coherent(self):
@@ -115,4 +115,8 @@ class SpeechExtractionItem(ClaimModel):
 
 class SpeechClaimExtraction(ClaimModel):
     item_id: str = Field(min_length=1)
-    claims: tuple[PublicClaim, ...] = ()
+    claims: tuple[PublicClaim, ...] = Field(default=(), max_length=8)
+
+
+class SpeechExtractionBatch(ClaimModel):
+    items: tuple[SpeechClaimExtraction, ...]

@@ -5,6 +5,13 @@ import unittest
 from wolfscope.agents.hybrid import HybridProvider
 from wolfscope.agents.runtime import PlayerRuntimeRegistry
 from wolfscope.agents.support import DeterministicSupportProvider
+from wolfscope.cognition.claims import SpeechClaimExtraction
+from wolfscope.cognition.extraction import (
+    EvidencePipeline,
+    FakePublicClaimExtractor,
+    PublicSpeechAnnotationCache,
+)
+from wolfscope.cognition.ledger import EvidenceLedgerRegistry
 from wolfscope.game import GameState, PlayerState
 from wolfscope.game.config import STANDARD_9_RULES
 from wolfscope.game.engine import GameEngine, GameRunStatus
@@ -97,10 +104,24 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
             gateway_factory,
         )
         support = DeterministicSupportProvider()
+        claim_extractor = FakePublicClaimExtractor(
+            [
+                (SpeechClaimExtraction(item_id="speech-1"),)
+                for _ in range(9)
+            ],
+        )
+        annotation_cache = PublicSpeechAnnotationCache()
+        view_builder = PlayerViewBuilder(state, events)
         provider = HybridProvider(
-            view_builder=PlayerViewBuilder(state, events),
+            view_builder=view_builder,
             runtimes=runtimes,
             support=support,
+            evidence_pipeline=EvidencePipeline(
+                ledgers=EvidenceLedgerRegistry(),
+                cache=annotation_cache,
+                extractor=claim_extractor,
+                source_resolver=view_builder,
+            ),
         )
 
         result = await GameEngine(
@@ -125,6 +146,8 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
             "support_exile_vote",
             {call[0] for call in support.calls},
         )
+        self.assertEqual(len(claim_extractor.calls), 9)
+        self.assertEqual(len(annotation_cache), 9)
         for seat in (1, 2, 3, 5, 6, 7, 8, 9):
             vote_input = gateways[seat].inputs[1]
             self.assertNotIn(

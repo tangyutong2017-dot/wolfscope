@@ -19,6 +19,12 @@ from wolfscope.agents.schemas import (
     VoteTaskObservation,
 )
 from wolfscope.agents.support import DeterministicSupportProvider
+from wolfscope.cognition.claims import SpeechExtractionItem
+from wolfscope.cognition.extraction import (
+    EvidencePipeline,
+    PublicSpeechAnnotationCache,
+)
+from wolfscope.cognition.ledger import EvidenceLedgerRegistry
 from wolfscope.contracts import Visibility
 from wolfscope.game import GameState, PlayerState
 from wolfscope.game.config import STANDARD_9_RULES
@@ -28,6 +34,7 @@ from wolfscope.game.engine import GameEngine
 from wolfscope.game.types import Phase
 from wolfscope.models.agentscope_gateway import AgentScopeModelGateway
 from wolfscope.models.config import ModelProfile, model_config_for
+from wolfscope.models.claim_extractor import AgentScopePublicClaimExtractor
 from wolfscope.player_view import PlayerViewBuilder
 
 
@@ -144,10 +151,20 @@ async def run_hybrid_day() -> dict:
         config,
         lambda _seat: AgentScopeModelGateway.from_environment(config),
     )
+    view_builder = PlayerViewBuilder(state, events)
+    claim_extractor = AgentScopePublicClaimExtractor.from_environment(config)
+    annotation_cache = PublicSpeechAnnotationCache()
+    ledgers = EvidenceLedgerRegistry()
     provider = HybridProvider(
-        view_builder=PlayerViewBuilder(state, events),
+        view_builder=view_builder,
         runtimes=runtimes,
         support=DeterministicSupportProvider(),
+        evidence_pipeline=EvidencePipeline(
+            ledgers=ledgers,
+            cache=annotation_cache,
+            extractor=claim_extractor,
+            source_resolver=view_builder,
+        ),
     )
     result = await GameEngine(
         state,
@@ -161,6 +178,7 @@ async def run_hybrid_day() -> dict:
         for seat in runtimes.seats
         for record in runtimes.get(seat).call_records
     ]
+    extraction_records = claim_extractor.traces
     return {
         "game_id": result.game_id,
         "status": result.status.value,
@@ -192,13 +210,62 @@ async def run_hybrid_day() -> dict:
             ),
             "latency_ms": sum(record.latency_ms for record in records),
         },
+        "extraction_summary": {
+            "calls": len(extraction_records),
+            "successful": sum(record.success for record in extraction_records),
+            "annotations": len(annotation_cache),
+            "claims": sum(
+                len(annotation.claims) for annotation in annotation_cache.values
+            ),
+            "input_tokens": sum(
+                record.token_usage.input_tokens for record in extraction_records
+            ),
+            "output_tokens": sum(
+                record.token_usage.output_tokens for record in extraction_records
+            ),
+            "latency_ms": sum(record.latency_ms for record in extraction_records),
+            "evidence_by_seat": {
+                str(seat): len(ledgers.get(seat).records)
+                for seat in ledgers.seats
+            },
+        },
         "traces": [record.model_dump(mode="json") for record in records],
+        "extraction_traces": [
+            record.model_dump(mode="json") for record in extraction_records
+        ],
+    }
+
+
+async def run_claim_extraction() -> dict:
+    config = model_config_for(ModelProfile.TEST)
+    extractor = AgentScopePublicClaimExtractor.from_environment(config)
+    items = await extractor.extract(
+        (
+            SpeechExtractionItem(
+                item_id="speech-1",
+                day=1,
+                speaker=7,
+                speech_context="day_speech",
+                text=(
+                    "我是7号预言家，昨夜查验1号是狼人。"
+                    "今天请大家把票投给1号；如果后面有人对跳，"
+                    "再比较双方发言。"
+                ),
+            ),
+        ),
+    )
+    return {
+        "items": [item.model_dump(mode="json") for item in items],
+        "trace": extractor.traces[-1].model_dump(mode="json"),
     }
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="WolfScope opt-in live smoke")
-    parser.add_argument("scenario", choices=("speech", "vote", "hybrid-day"))
+    parser.add_argument(
+        "scenario",
+        choices=("speech", "vote", "hybrid-day", "claim-extraction"),
+    )
     args = parser.parse_args()
     if args.scenario == "speech":
         print(json.dumps(asyncio.run(run_speech()), ensure_ascii=False, indent=2))
@@ -206,6 +273,14 @@ def main() -> None:
         print(json.dumps(asyncio.run(run_vote()), ensure_ascii=False, indent=2))
     elif args.scenario == "hybrid-day":
         print(json.dumps(asyncio.run(run_hybrid_day()), ensure_ascii=False, indent=2))
+    elif args.scenario == "claim-extraction":
+        print(
+            json.dumps(
+                asyncio.run(run_claim_extraction()),
+                ensure_ascii=False,
+                indent=2,
+            ),
+        )
 
 
 if __name__ == "__main__":
