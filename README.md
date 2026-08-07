@@ -76,7 +76,7 @@ wolfscope-m1 good-win-seed-42 --output-dir replays --overwrite
 python -m unittest discover -s tests
 ```
 
-当前包含 163 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent、夜间角色 Agent 和混合单日局，以及 EvidenceLedger、确定性映射、规则推导、严格公共 Claim、逐 Claim 容错解析、失败回归样本、紧凑 EvidenceContext、本地 Evidence/Strategy 引用审计、确定性角色先验与硬证据更新、ID 隔离和失败降级。
+当前包含 166 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent、夜间角色 Agent、死亡技能/遗言 Agent 和混合单日局，以及 EvidenceLedger、确定性映射、规则推导、严格公共 Claim、逐 Claim 容错解析、失败回归样本、紧凑 EvidenceContext、本地 Evidence/Strategy 引用审计、确定性角色先验与硬证据更新、ID 隔离和失败降级。
 
 ## 项目文档
 
@@ -92,4 +92,4 @@ python -m unittest discover -s tests
 
 ## 当前阶段
 
-M1 已完成并提交。M2 的 Flash 单玩家冒烟、Fake Gateway 单日局、真实 Flash 单日混合局、完整警长竞选和夜间角色行动均已跑通。警长验证包含上警、竞选发言、同时退水共25次模型调用；夜间验证完成狼刀、预言家查验和女巫用药3次结构化决策。`ScriptedProvider` 只保留为 M1 确定性回归工具；尚未接入 Agent 的死亡技能和遗言暂由无策略的 `DeterministicSupportProvider` 承担，并将继续退出正式路径。正式实验中的九名玩家统一使用 DeepSeek Pro，不做动态模型路由。
+M1 已完成并提交。M2 的公开发言/投票、完整警长竞选、夜间角色行动、PK/遗言、猎人枪权、警长发言方向和警徽处理均已接入座位隔离 Agent。定向 Flash 验证已覆盖警长25次决策、夜间3次决策，以及死亡遗言→猎人开枪→警徽处理连续链；模型请求失败均可审计并安全降级。`ScriptedProvider` 只保留为确定性回归工具，正式路径下一步验证完整多日终局。正式实验中的九名玩家统一使用 DeepSeek Pro，不做动态模型路由。

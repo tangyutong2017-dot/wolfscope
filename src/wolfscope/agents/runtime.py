@@ -17,7 +17,11 @@ from wolfscope.models.gateway import (
 
 from .schemas import (
     AgentDecisionInput,
+    BadgeTransferDecision,
+    BadgeTransferTaskObservation,
     DecisionTask,
+    HunterTargetDecision,
+    HunterTargetTaskObservation,
     SheriffVoteDecision,
     SheriffVoteTaskObservation,
     SeerTargetDecision,
@@ -218,6 +222,22 @@ class PlayerRuntime:
                     and observation.poison_available
                     and decision.target in observation.poison_targets
                 )
+            )
+        elif isinstance(decision, HunterTargetDecision):
+            observation = decision_input.observation
+            if not isinstance(observation, HunterTargetTaskObservation):
+                raise TypeError("HunterTargetDecision requires hunter observation")
+            legal_target = (
+                decision.target is None
+                or decision.target in observation.eligible_targets
+            )
+        elif isinstance(decision, BadgeTransferDecision):
+            observation = decision_input.observation
+            if not isinstance(observation, BadgeTransferTaskObservation):
+                raise TypeError("BadgeTransferDecision requires badge observation")
+            legal_target = (
+                decision.target is None
+                or decision.target in observation.eligible_targets
             )
         if not legal_target:
             self.call_records.append(

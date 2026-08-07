@@ -33,8 +33,16 @@ class PlayerViewBuilder:
         self._source_event_ids: dict[int, tuple[int, ...]] = {}
 
     def build(self, viewer_seat: int) -> PlayerView:
+        return self._build(viewer_seat, allow_dead=False)
+
+    def build_terminal_action(self, viewer_seat: int) -> PlayerView:
+        """Build a scoped view only while Engine is resolving this dead actor."""
+
+        return self._build(viewer_seat, allow_dead=True)
+
+    def _build(self, viewer_seat: int, *, allow_dead: bool) -> PlayerView:
         viewer = self.state.get_player(viewer_seat)
-        if not viewer.alive:
+        if not viewer.alive and not allow_dead:
             raise DeadPlayerViewError(
                 f"cannot build a current player view for dead seat {viewer_seat}",
             )

@@ -130,6 +130,32 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
                     },
                 ],
             )
+            if seat == 4:
+                responses[-2:] = [
+                    {
+                        "action": "death_last_words",
+                        "speech": "4号首夜死亡遗言。",
+                        "intent": "验证首夜遗言",
+                        "confidence": 0.6,
+                    },
+                ]
+            if seat == 9:
+                responses.extend(
+                    [
+                        {
+                            "action": "last_words",
+                            "speech": "9号测试遗言。",
+                            "intent": "验证放逐遗言",
+                            "confidence": 0.6,
+                        },
+                        {
+                            "action": "hunter_target",
+                            "target": None,
+                            "confidence": 0.6,
+                            "reason": "验证猎人不开枪",
+                        },
+                    ],
+                )
             gateway = FakeModelGateway(responses)
             gateways[seat] = gateway
             return gateway
@@ -142,7 +168,7 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
         claim_extractor = FakePublicClaimExtractor(
             [
                 (SpeechClaimExtraction(item_id="speech-1"),)
-                for _ in range(9)
+                for _ in range(10)
             ],
         )
         annotation_cache = PublicSpeechAnnotationCache()
@@ -170,9 +196,10 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertIs(result.status, GameRunStatus.MAX_DAYS_REACHED)
         self.assertFalse(state.get_player(4).alive)
         self.assertFalse(state.get_player(9).alive)
-        self.assertEqual(len(runtimes.get(4).call_records), 1)
-        for seat in (2, 3, 5, 6, 9):
+        self.assertEqual(len(runtimes.get(4).call_records), 2)
+        for seat in (2, 3, 5, 6):
             self.assertEqual(len(runtimes.get(seat).call_records), 3)
+        self.assertEqual(len(runtimes.get(9).call_records), 5)
         for seat in (1, 7, 8):
             self.assertEqual(len(runtimes.get(seat).call_records), 4)
         self.assertNotIn(
@@ -199,10 +226,13 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
             "support_exile_vote",
             {call[0] for call in support.calls},
         )
-        self.assertEqual(len(claim_extractor.calls), 9)
-        self.assertEqual(len(annotation_cache), 9)
+        self.assertEqual(len(claim_extractor.calls), 10)
+        self.assertEqual(len(annotation_cache), 10)
         for seat in (1, 2, 3, 5, 6, 7, 8, 9):
-            vote_input = gateways[seat].inputs[-1]
+            vote_input = next(
+                item for item in gateways[seat].inputs
+                if item.observation.task == "vote"
+            )
             self.assertIsNotNone(vote_input.evidence_context)
             self.assertEqual(vote_input.evidence_context.owner, seat)
             self.assertGreater(vote_input.evidence_context.ledger_revision, 0)

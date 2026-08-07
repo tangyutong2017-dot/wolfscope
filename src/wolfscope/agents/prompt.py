@@ -6,12 +6,18 @@ import json
 
 from wolfscope.agents.schemas import (
     AgentDecisionInput,
+    BadgeTransferTaskObservation,
+    DeathLastWordsTaskObservation,
     DecisionTask,
     PlayerContext,
+    HunterTargetTaskObservation,
+    LastWordsTaskObservation,
+    PkSpeechTaskObservation,
     SheriffCampaignTaskObservation,
     SheriffSignupTaskObservation,
     SheriffVoteTaskObservation,
     SheriffWithdrawalTaskObservation,
+    SpeechDirectionTaskObservation,
     SeerTargetTaskObservation,
     SpeechTaskObservation,
     VoteTaskObservation,
@@ -64,6 +70,12 @@ def render_decision_prompt(
         DecisionTask.WOLF_TARGET: "代表当前存活狼队选择今晚唯一合法刀口；允许战术性自刀。",
         DecisionTask.SEER_TARGET: "选择今晚的合法查验目标，不能查验自己或重复查验。",
         DecisionTask.WITCH_ACTION: "根据今晚刀口和剩余药物选择过夜、救人或毒人。",
+        DecisionTask.SPEECH_DIRECTION: "作为警长选择今天顺时针或逆时针发言，自己最后发言。",
+        DecisionTask.PK_SPEECH: "完成平票PK发言，回应当前焦点并给出可核对信息。",
+        DecisionTask.LAST_WORDS: "你即将因本轮放逐出局；完成最后遗言，不得描述自己未来仍会参与后续轮次。",
+        DecisionTask.DEATH_LAST_WORDS: "你已在当前死亡批次中死亡；这是首夜死讯公布后、第一天白天发言前，不能等待或引用尚未发生的白天发言和票型。完成唯一一次死亡遗言，不得假设自己未来再次出局或继续行动。若你是可开枪猎人，本任务只发表遗言，不得承诺开枪、不开枪或具体目标；遗言结束后 Engine 会立即用独立任务询问枪权。",
+        DecisionTask.HUNTER_TARGET: "你已经死亡且正在结算唯一一次猎人枪权；当前不能等待任何未来发言或票型，必须根据已有信息决定立即开枪或永久不开枪，如开枪只能选择 eligible_targets。",
+        DecisionTask.BADGE_TRANSFER: "你已经死亡且正在结算警徽；立即移交给 eligible_targets 中一人，或 target=null 永久撕毁。",
     }[task]
     payload = _model_payload(decision_input)
     rendered_payload = json.dumps(payload, ensure_ascii=False, indent=2)
@@ -137,6 +149,46 @@ def _model_payload(decision_input: AgentDecisionInput) -> dict:
             "poison_available": observation.poison_available,
             "can_save": observation.can_save,
             "poison_targets": observation.poison_targets,
+        }
+    elif isinstance(observation, SpeechDirectionTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "alive_seats": observation.alive_seats,
+        }
+    elif isinstance(observation, PkSpeechTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "tied_seats": observation.tied_seats,
+            "day_speeches": observation.day_speeches,
+            "previous_pk_speeches": observation.previous_pk_speeches,
+        }
+    elif isinstance(observation, LastWordsTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "day_speeches": observation.day_speeches,
+            "votes": observation.votes,
+            "revotes": observation.revotes,
+        }
+    elif isinstance(observation, DeathLastWordsTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "deaths": observation.deaths,
+            "timing": "首夜死亡公布后、第一天白天发言前；不存在本日发言或票型。",
+        }
+    elif isinstance(observation, HunterTargetTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "death_cause": observation.death_cause,
+            "eligible_targets": observation.eligible_targets,
+            "your_last_words": observation.last_words,
+            "decision_boundary": "枪权以本任务为唯一正式决定；your_last_words 只提供公开语境，不得把其中的非正式措辞当作已执行行动。",
+            "information_limit": "现在立即结算，不能等待或假设尚未发生的白天发言和票型。",
+        }
+    elif isinstance(observation, BadgeTransferTaskObservation):
+        task_context = {
+            "task": observation.task,
+            "eligible_targets": observation.eligible_targets,
+            "hunter_target": observation.hunter_target,
         }
     else:  # pragma: no cover - discriminated union protects this boundary
         raise TypeError("unsupported task observation")

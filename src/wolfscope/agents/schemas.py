@@ -21,6 +21,9 @@ from wolfscope.game.day import (
     DayTurnObservation,
     ExileVoteObservation,
     ExileVoteRound,
+    LastWordsObservation,
+    PkSpeechObservation,
+    SpeechDirectionObservation,
 )
 from wolfscope.game.sheriff import (
     CampaignSpeechObservation,
@@ -32,6 +35,11 @@ from wolfscope.game.night import (
     SeerNightObservation,
     WitchNightObservation,
     WolfNightObservation,
+)
+from wolfscope.game.resolution import (
+    BadgeTransferObservation,
+    DeathLastWordsObservation,
+    HunterShotObservation,
 )
 from wolfscope.game.types import Phase, RoleType
 
@@ -46,6 +54,12 @@ class DecisionTask(StrEnum):
     WOLF_TARGET = "wolf_target"
     SEER_TARGET = "seer_target"
     WITCH_ACTION = "witch_action"
+    SPEECH_DIRECTION = "speech_direction"
+    PK_SPEECH = "pk_speech"
+    LAST_WORDS = "last_words"
+    DEATH_LAST_WORDS = "death_last_words"
+    HUNTER_TARGET = "hunter_target"
+    BADGE_TRANSFER = "badge_transfer"
 
 
 class VoteContextMode(StrEnum):
@@ -240,6 +254,92 @@ class WitchActionTaskObservation(StrictModel):
         )
 
 
+class SpeechDirectionTaskObservation(StrictModel):
+    task: Literal["speech_direction"] = "speech_direction"
+    actor: Seat
+    alive_seats: tuple[Seat, ...]
+
+    @classmethod
+    def from_domain(cls, observation: SpeechDirectionObservation):
+        return cls(actor=observation.sheriff, alive_seats=observation.alive_seats)
+
+
+class PkSpeechTaskObservation(StrictModel):
+    task: Literal["pk_speech"] = "pk_speech"
+    actor: Seat
+    tied_seats: tuple[Seat, ...]
+    day_speeches: tuple[tuple[Seat, str], ...]
+    previous_pk_speeches: tuple[tuple[Seat, str], ...]
+
+    @classmethod
+    def from_domain(cls, observation: PkSpeechObservation):
+        return cls(
+            actor=observation.actor,
+            tied_seats=observation.tied_seats,
+            day_speeches=observation.day_speeches,
+            previous_pk_speeches=observation.previous_pk_speeches,
+        )
+
+
+class LastWordsTaskObservation(StrictModel):
+    task: Literal["last_words"] = "last_words"
+    actor: Seat
+    day_speeches: tuple[tuple[Seat, str], ...]
+    votes: tuple[tuple[Seat, Seat | None], ...]
+    revotes: tuple[tuple[Seat, Seat | None], ...]
+
+    @classmethod
+    def from_domain(cls, observation: LastWordsObservation):
+        return cls(
+            actor=observation.actor,
+            day_speeches=observation.day_speeches,
+            votes=observation.votes,
+            revotes=observation.revotes,
+        )
+
+
+class DeathLastWordsTaskObservation(StrictModel):
+    task: Literal["death_last_words"] = "death_last_words"
+    actor: Seat
+    deaths: tuple[Seat, ...]
+
+    @classmethod
+    def from_domain(cls, observation: DeathLastWordsObservation):
+        return cls(actor=observation.actor, deaths=observation.deaths)
+
+
+class HunterTargetTaskObservation(StrictModel):
+    task: Literal["hunter_target"] = "hunter_target"
+    actor: Seat
+    death_cause: str
+    eligible_targets: tuple[Seat, ...]
+    last_words: str | None = None
+
+    @classmethod
+    def from_domain(cls, observation: HunterShotObservation):
+        return cls(
+            actor=observation.hunter,
+            death_cause=observation.death_cause.value,
+            eligible_targets=observation.eligible_targets,
+            last_words=observation.last_words,
+        )
+
+
+class BadgeTransferTaskObservation(StrictModel):
+    task: Literal["badge_transfer"] = "badge_transfer"
+    actor: Seat
+    eligible_targets: tuple[Seat, ...]
+    hunter_target: Seat | None = None
+
+    @classmethod
+    def from_domain(cls, observation: BadgeTransferObservation):
+        return cls(
+            actor=observation.former_sheriff,
+            eligible_targets=observation.eligible_targets,
+            hunter_target=observation.hunter_target,
+        )
+
+
 TaskObservation = Annotated[
     SpeechTaskObservation
     | VoteTaskObservation
@@ -249,7 +349,13 @@ TaskObservation = Annotated[
     | SheriffVoteTaskObservation
     | WolfTargetTaskObservation
     | SeerTargetTaskObservation
-    | WitchActionTaskObservation,
+    | WitchActionTaskObservation
+    | SpeechDirectionTaskObservation
+    | PkSpeechTaskObservation
+    | LastWordsTaskObservation
+    | DeathLastWordsTaskObservation
+    | HunterTargetTaskObservation
+    | BadgeTransferTaskObservation,
     Field(discriminator="task"),
 ]
 
@@ -438,3 +544,53 @@ class WitchActionDecision(StrictModel):
         if self.action != "pass" and self.target is None:
             raise ValueError("save and poison require a target")
         return self
+
+
+class SpeechDirectionDecision(StrictModel):
+    action: Literal["speech_direction"] = "speech_direction"
+    direction: Literal["clockwise", "counterclockwise"]
+    confidence: Probability
+    reason: str = Field(min_length=1)
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
+
+
+class PkSpeechDecision(StrictModel):
+    action: Literal["pk_speech"] = "pk_speech"
+    speech: str = Field(min_length=1)
+    intent: str = Field(min_length=1)
+    confidence: Probability
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
+
+
+class LastWordsDecision(StrictModel):
+    action: Literal["last_words", "death_last_words"]
+    speech: str = Field(min_length=1)
+    intent: str = Field(min_length=1)
+    confidence: Probability
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
+
+
+class HunterTargetDecision(StrictModel):
+    action: Literal["hunter_target"] = "hunter_target"
+    target: Seat | None
+    confidence: Probability
+    reason: str = Field(min_length=1)
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()
+
+
+class BadgeTransferDecision(StrictModel):
+    action: Literal["badge_transfer"] = "badge_transfer"
+    target: Seat | None
+    confidence: Probability
+    reason: str = Field(min_length=1)
+    event_ids: tuple[int, ...] = ()
+    evidence_ids: tuple[str, ...] = ()
+    strategy_ids: tuple[str, ...] = ()

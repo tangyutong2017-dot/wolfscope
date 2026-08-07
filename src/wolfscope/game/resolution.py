@@ -25,6 +25,7 @@ class HunterShotObservation:
     hunter: int
     death_cause: DeathCause
     eligible_targets: tuple[int, ...]
+    last_words: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +33,7 @@ class BadgeTransferObservation:
     day: int
     former_sheriff: int
     eligible_targets: tuple[int, ...]
+    hunter_target: int | None = None
 
 
 class DeathResolutionProvider(Protocol):
@@ -128,6 +130,7 @@ class DeathResolutionEngine:
                 hunter=hunter.seat,
                 death_cause=hunter.death_cause,
                 eligible_targets=eligible,
+                last_words=self._latest_last_words(hunter.seat),
             )
             choice = None
             for attempt in range(2):
@@ -177,6 +180,7 @@ class DeathResolutionEngine:
                 day=self.state.day,
                 former_sheriff=pending_sheriff,
                 eligible_targets=eligible,
+                hunter_target=hunter_target,
             )
             choice = None
             for attempt in range(2):
@@ -225,6 +229,16 @@ class DeathResolutionEngine:
             hunter_target,
             badge_destroyed,
             start_index,
+        )
+
+    def _latest_last_words(self, seat: int) -> str | None:
+        return next(
+            (
+                event.content
+                for event in reversed(self.events.events)
+                if event.event_type == "last_words" and event.actor == seat
+            ),
+            None,
         )
 
     def check_winner(self) -> Camp | None:

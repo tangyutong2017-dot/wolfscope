@@ -32,7 +32,7 @@ from wolfscope.cognition.extraction import (
 from wolfscope.cognition.ledger import EvidenceLedgerRegistry
 from wolfscope.cognition.ledger import EvidenceLedger
 from wolfscope.contracts import Visibility
-from wolfscope.game import GameState, PlayerState
+from wolfscope.game import DeathCause, GameState, PlayerState
 from wolfscope.game.config import STANDARD_9_RULES
 from wolfscope.game.day import ExileVoteRound
 from wolfscope.game.events import EventLog
@@ -40,6 +40,7 @@ from wolfscope.game.engine import GameEngine
 from wolfscope.game.night import NightEngine
 from wolfscope.game.sheriff import SheriffElectionEngine
 from wolfscope.game.types import Phase
+from wolfscope.game.resolution import DeathResolutionEngine
 from wolfscope.models.agentscope_gateway import AgentScopeModelGateway
 from wolfscope.models.config import ModelProfile, model_config_for
 from wolfscope.models.claim_extractor import AgentScopePublicClaimExtractor
@@ -486,6 +487,76 @@ async def run_night_actions() -> dict:
     }
 
 
+async def run_terminal_actions() -> dict:
+    config = model_config_for(ModelProfile.TEST)
+    state = GameState(
+        seed=42,
+        players=[
+            PlayerState(seat=seat, role=role)
+            for seat, role in enumerate(STANDARD_9_RULES.roles, start=1)
+        ],
+    )
+    events = EventLog()
+    state.sheriff.holder = 9
+    state.sheriff.election_completed = True
+    state.mark_dead(9, DeathCause.WEREWOLF)
+    state.phase = Phase.DAWN_ANNOUNCEMENT
+    events.emit(
+        day=1,
+        phase=Phase.DAWN_ANNOUNCEMENT,
+        event_type="dawn_deaths",
+        visibility=Visibility.PUBLIC,
+        content="昨夜9号死亡",
+        data={"deaths": [9]},
+    )
+    runtimes = PlayerRuntimeRegistry.create(
+        config,
+        lambda _seat: AgentScopeModelGateway.from_environment(config),
+    )
+    provider = HybridProvider(
+        view_builder=PlayerViewBuilder(state, events),
+        runtimes=runtimes,
+        support=DeterministicSupportProvider(),
+    )
+    result = await DeathResolutionEngine(state, events).resolve(
+        (9,),
+        provider,
+        last_words_seats=(9,),
+    )
+    records = list(runtimes.get(9).call_records)
+    return {
+        "scenario": "terminal-actions",
+        "model": config.model_name,
+        "last_words": [
+            {"seat": seat, "content": content}
+            for seat, content in result.last_words
+        ],
+        "hunter_target": result.hunter_target,
+        "badge_holder": result.badge_holder,
+        "badge_destroyed": result.badge_destroyed,
+        "all_deaths": list(result.all_deaths),
+        "trace_summary": {
+            "calls": len(records),
+            "successful": sum(record.success for record in records),
+            "fallbacks": sum(record.fallback_used for record in records),
+            "input_tokens": sum(
+                record.token_usage.input_tokens for record in records
+            ),
+            "output_tokens": sum(
+                record.token_usage.output_tokens for record in records
+            ),
+            "latency_ms": sum(record.latency_ms for record in records),
+            "strategy_references": sum(
+                len(record.accepted_strategy_ids) for record in records
+            ),
+            "invalid_strategy_references": sum(
+                len(record.invalid_strategy_ids) for record in records
+            ),
+        },
+        "traces": [record.model_dump(mode="json") for record in records],
+    }
+
+
 async def run_claim_extraction() -> dict:
     config = model_config_for(ModelProfile.TEST)
     extractor = AgentScopePublicClaimExtractor.from_environment(config)
@@ -531,6 +602,7 @@ def main() -> None:
             "hybrid-day",
             "sheriff-election",
             "night-actions",
+            "terminal-actions",
             "claim-extraction",
         ),
     )
@@ -567,6 +639,8 @@ def main() -> None:
         result = asyncio.run(run_sheriff_election())
     elif args.scenario == "night-actions":
         result = asyncio.run(run_night_actions())
+    elif args.scenario == "terminal-actions":
+        result = asyncio.run(run_terminal_actions())
     _emit_result(
         result,
         output=args.output,

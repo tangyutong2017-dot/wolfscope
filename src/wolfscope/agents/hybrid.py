@@ -7,7 +7,16 @@ from typing import TYPE_CHECKING
 from wolfscope.agents.runtime import PlayerRuntimeRegistry
 from wolfscope.agents.schemas import (
     AgentDecisionInput,
+    BadgeTransferDecision,
+    BadgeTransferTaskObservation,
+    DeathLastWordsTaskObservation,
     DecisionTask,
+    HunterTargetDecision,
+    HunterTargetTaskObservation,
+    LastWordsDecision,
+    LastWordsTaskObservation,
+    PkSpeechDecision,
+    PkSpeechTaskObservation,
     PublicGameSummary,
     SheriffCampaignDecision,
     SheriffCampaignTaskObservation,
@@ -20,6 +29,8 @@ from wolfscope.agents.schemas import (
     SeerTargetDecision,
     SeerTargetTaskObservation,
     SpeechDecision,
+    SpeechDirectionDecision,
+    SpeechDirectionTaskObservation,
     SpeechTaskObservation,
     VoteDecision,
     VoteContextMode,
@@ -29,7 +40,7 @@ from wolfscope.agents.schemas import (
     WolfTargetDecision,
     WolfTargetTaskObservation,
 )
-from wolfscope.game.day import DayTurnAction
+from wolfscope.game.day import DayTurnAction, SpeechDirection
 from wolfscope.game.night import WitchAction, WitchActionType
 from wolfscope.player_view import PlayerViewBuilder
 from wolfscope.cognition.context import EvidenceContextBuilder
@@ -109,8 +120,18 @@ class HybridProvider:
         )
         return decision.target
 
-    async def _input(self, seat: int, observation) -> AgentDecisionInput:
-        view = self.view_builder.build(seat)
+    async def _input(
+        self,
+        seat: int,
+        observation,
+        *,
+        terminal_action: bool = False,
+    ) -> AgentDecisionInput:
+        view = (
+            self.view_builder.build_terminal_action(seat)
+            if terminal_action
+            else self.view_builder.build(seat)
+        )
         if self.evidence_pipeline is not None:
             await self.evidence_pipeline.sync(view)
             ledger = self.evidence_pipeline.ledgers.get(seat)
@@ -248,19 +269,79 @@ class HybridProvider:
         return decision.target
 
     async def choose_speech_direction(self, observation):
-        return await self.support.choose_speech_direction(observation)
+        task_observation = SpeechDirectionTaskObservation.from_domain(observation)
+        decision_input = await self._input(task_observation.actor, task_observation)
+        decision = await self.runtimes.get(task_observation.actor).decide(
+            task=DecisionTask.SPEECH_DIRECTION,
+            decision_input=decision_input,
+            output_schema=SpeechDirectionDecision,
+            use_safe_fallback=True,
+        )
+        return SpeechDirection(decision.direction)
 
     async def pk_speech(self, observation):
-        return await self.support.pk_speech(observation)
+        task_observation = PkSpeechTaskObservation.from_domain(observation)
+        decision_input = await self._input(task_observation.actor, task_observation)
+        decision = await self.runtimes.get(task_observation.actor).decide(
+            task=DecisionTask.PK_SPEECH,
+            decision_input=decision_input,
+            output_schema=PkSpeechDecision,
+            use_safe_fallback=True,
+        )
+        return decision.speech
 
     async def last_words(self, observation):
-        return await self.support.last_words(observation)
+        task_observation = LastWordsTaskObservation.from_domain(observation)
+        decision_input = await self._input(task_observation.actor, task_observation)
+        decision = await self.runtimes.get(task_observation.actor).decide(
+            task=DecisionTask.LAST_WORDS,
+            decision_input=decision_input,
+            output_schema=LastWordsDecision,
+            use_safe_fallback=True,
+        )
+        return decision.speech
 
     async def death_last_words(self, observation):
-        return await self.support.death_last_words(observation)
+        task_observation = DeathLastWordsTaskObservation.from_domain(observation)
+        decision_input = await self._input(
+            task_observation.actor,
+            task_observation,
+            terminal_action=True,
+        )
+        decision = await self.runtimes.get(task_observation.actor).decide(
+            task=DecisionTask.DEATH_LAST_WORDS,
+            decision_input=decision_input,
+            output_schema=LastWordsDecision,
+            use_safe_fallback=True,
+        )
+        return decision.speech
 
     async def choose_hunter_target(self, observation):
-        return await self.support.choose_hunter_target(observation)
+        task_observation = HunterTargetTaskObservation.from_domain(observation)
+        decision_input = await self._input(
+            task_observation.actor,
+            task_observation,
+            terminal_action=True,
+        )
+        decision = await self.runtimes.get(task_observation.actor).decide(
+            task=DecisionTask.HUNTER_TARGET,
+            decision_input=decision_input,
+            output_schema=HunterTargetDecision,
+            use_safe_fallback=True,
+        )
+        return decision.target
 
     async def choose_badge_transfer(self, observation):
-        return await self.support.choose_badge_transfer(observation)
+        task_observation = BadgeTransferTaskObservation.from_domain(observation)
+        decision_input = await self._input(
+            task_observation.actor,
+            task_observation,
+            terminal_action=True,
+        )
+        decision = await self.runtimes.get(task_observation.actor).decide(
+            task=DecisionTask.BADGE_TRANSFER,
+            decision_input=decision_input,
+            output_schema=BadgeTransferDecision,
+            use_safe_fallback=True,
+        )
+        return decision.target

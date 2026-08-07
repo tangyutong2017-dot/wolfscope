@@ -159,6 +159,18 @@ class PlayerViewBuilderTests(unittest.TestCase):
         with self.assertRaises(DeadPlayerViewError):
             PlayerViewBuilder(state, event_log()).build(4)
 
+    def test_dead_player_terminal_view_requires_explicit_engine_path(self) -> None:
+        state = game_state()
+        state.mark_dead(9, DeathCause.EXILE)
+        state.phase = Phase.HUNTER_SHOT
+        builder = PlayerViewBuilder(state, event_log())
+
+        view = builder.build_terminal_action(9)
+
+        self.assertEqual(view.viewer_seat, 9)
+        self.assertFalse(view.players[8].alive)
+        self.assertIsInstance(view.own_role_state, HunterPrivateState)
+
     def test_returned_events_are_deep_copied_from_god_log(self) -> None:
         events = event_log()
         view = PlayerViewBuilder(game_state(), events).build(4)

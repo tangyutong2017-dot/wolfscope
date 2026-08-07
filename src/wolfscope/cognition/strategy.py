@@ -41,6 +41,12 @@ class StrategyBrief(StrictModel):
         "wolf_target",
         "seer_target",
         "witch_action",
+        "speech_direction",
+        "pk_speech",
+        "last_words",
+        "death_last_words",
+        "hunter_target",
+        "badge_transfer",
     ]
     role: RoleType
     role_goal: str = Field(min_length=1)
@@ -129,6 +135,12 @@ class StrategyBuilder:
             "wolf_target",
             "seer_target",
             "witch_action",
+            "speech_direction",
+            "pk_speech",
+            "last_words",
+            "death_last_words",
+            "hunter_target",
+            "badge_transfer",
         ],
         situation: DecisionBrief | None = None,
     ) -> StrategyBrief:
@@ -142,6 +154,12 @@ class StrategyBuilder:
             "wolf_target": ("advance_wolf_win_path", "结合屠神或屠民路线选择合法刀口，并允许战术性自刀。"),
             "seer_target": ("maximize_check_value", "优先查验能显著缩小身份空间或影响白天归票的玩家。"),
             "witch_action": ("manage_witch_resources", "结合刀口、存活结构和药物价值选择救、毒或保留。"),
+            "speech_direction": ("choose_information_order", "选择更有利于比较发言和归票的信息顺序。"),
+            "pk_speech": ("resolve_pk_pressure", "回应平票焦点并指出双方可核对的关键差异。"),
+            "last_words": ("leave_auditable_legacy", "用遗言留下可核对的身份、信息和后续建议。"),
+            "death_last_words": ("leave_auditable_legacy", "用遗言留下可核对的身份、信息和后续建议。"),
+            "hunter_target": ("use_hunter_shot", "只在带人收益高于误伤风险时开枪，否则可以不开枪。"),
+            "badge_transfer": ("preserve_information_leadership", "将警徽交给更可信且能组织信息的存活玩家，必要时撕毁。"),
         }[task]
         task_priority = StrategyPriority(
             priority_id=priority_id,

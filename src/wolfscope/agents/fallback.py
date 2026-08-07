@@ -9,6 +9,8 @@ from pydantic import BaseModel
 from .schemas import (
     AgentDecisionInput,
     DecisionTask,
+    BadgeTransferTaskObservation,
+    HunterTargetTaskObservation,
     SeerTargetTaskObservation,
     WitchActionTaskObservation,
     WolfTargetTaskObservation,
@@ -102,6 +104,45 @@ def safe_fallback_decision(
             "action": "pass",
             "target": None,
             "reason": "模型调用失败，保留药物并安全过夜。",
+            "confidence": 0.0,
+        }
+    elif task is DecisionTask.SPEECH_DIRECTION:
+        payload = {
+            "action": "speech_direction",
+            "direction": "clockwise",
+            "reason": "模型调用失败，使用固定顺时针方向。",
+            "confidence": 0.0,
+        }
+    elif task is DecisionTask.PK_SPEECH:
+        payload = {
+            "action": "pk_speech",
+            "speech": f"{seat}号PK阶段暂时没有新增信息，请结合此前发言和票型判断。",
+            "intent": "模型调用失败后的最小PK发言",
+            "confidence": 0.0,
+        }
+    elif task in {DecisionTask.LAST_WORDS, DecisionTask.DEATH_LAST_WORDS}:
+        payload = {
+            "action": task.value,
+            "speech": f"{seat}号没有更多遗言，请结合公开发言和票型继续判断。",
+            "intent": "模型调用失败后的最小遗言",
+            "confidence": 0.0,
+        }
+    elif task is DecisionTask.HUNTER_TARGET:
+        if not isinstance(decision_input.observation, HunterTargetTaskObservation):
+            raise TypeError("hunter fallback requires hunter observation")
+        payload = {
+            "action": "hunter_target",
+            "target": None,
+            "reason": "模型调用失败，为避免误伤选择不开枪。",
+            "confidence": 0.0,
+        }
+    elif task is DecisionTask.BADGE_TRANSFER:
+        if not isinstance(decision_input.observation, BadgeTransferTaskObservation):
+            raise TypeError("badge fallback requires badge observation")
+        payload = {
+            "action": "badge_transfer",
+            "target": None,
+            "reason": "模型调用失败，确定性撕毁警徽。",
             "confidence": 0.0,
         }
     else:  # pragma: no cover - protects future enum extensions
