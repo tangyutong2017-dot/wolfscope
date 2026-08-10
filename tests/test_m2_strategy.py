@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from wolfscope.agents.hybrid import AgentGameProvider
+from wolfscope.agents.profile import PlayerTendencyRegistry, SheriffInitiative
 from wolfscope.agents.runtime import PlayerRuntime
 from wolfscope.agents.prompt import render_decision_prompt
 from wolfscope.agents.schemas import (
@@ -43,6 +44,29 @@ def view_for(seat: int):
 
 
 class StrategyBuilderTests(unittest.TestCase):
+    def test_sheriff_initiative_is_seeded_and_role_independent(self) -> None:
+        first = PlayerTendencyRegistry.from_seed(42)
+        second = PlayerTendencyRegistry.from_seed(42)
+        values = tuple(first.get(seat).sheriff_initiative for seat in range(1, 10))
+
+        self.assertEqual(
+            values,
+            tuple(second.get(seat).sheriff_initiative for seat in range(1, 10)),
+        )
+        self.assertEqual(values.count(SheriffInitiative.HIGH), 2)
+        self.assertEqual(values.count(SheriffInitiative.MEDIUM), 3)
+        self.assertEqual(values.count(SheriffInitiative.LOW), 4)
+
+    def test_nonseer_signup_uses_seeded_initiative_method(self) -> None:
+        brief = StrategyBuilder().build(
+            owner=4,
+            role=RoleType.VILLAGER,
+            day=1,
+            task="sheriff_signup",
+            sheriff_initiative=SheriffInitiative.LOW,
+        )
+        self.assertIn("low_sheriff_initiative", brief.strategy_ids)
+
     def test_complexity_policy_uses_role_default_and_villager_escalation(self) -> None:
         self.assertEqual(
             AgentGameProvider._complexity_for(

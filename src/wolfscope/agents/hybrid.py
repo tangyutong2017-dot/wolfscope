@@ -53,6 +53,7 @@ from wolfscope.cognition.strategy import (
     WolfTeamPlan,
 )
 from wolfscope.agents.speech_policy import SpeechPolicy
+from wolfscope.agents.profile import PlayerTendencyRegistry
 
 if TYPE_CHECKING:
     from wolfscope.cognition.extraction import EvidencePipeline
@@ -73,6 +74,7 @@ class AgentGameProvider:
         vote_context_mode: VoteContextMode = VoteContextMode.FULL,
         strategy_builder: StrategyBuilder | None = None,
         strategy_situation_builder: StrategySituationBuilder | None = None,
+        tendency_registry: PlayerTendencyRegistry | None = None,
     ) -> None:
         self.view_builder = view_builder
         self.runtimes = runtimes
@@ -85,6 +87,9 @@ class AgentGameProvider:
         self.strategy_builder = strategy_builder or StrategyBuilder()
         self.strategy_situation_builder = (
             strategy_situation_builder or StrategySituationBuilder()
+        )
+        self.tendency_registry = tendency_registry or PlayerTendencyRegistry.from_seed(
+            view_builder.state.seed,
         )
         self.wolf_team_plan: WolfTeamPlan | None = None
         self.wolf_team_plan_history: list[WolfTeamPlan] = []
@@ -184,6 +189,7 @@ class AgentGameProvider:
             situation=strategy_situation,
             situation_tags=situation_tags,
             wolf_team_plan=self.wolf_team_plan,
+            sheriff_initiative=self.tendency_registry.get(seat).sheriff_initiative,
         )
         complexity_level, complexity_reason = self._complexity_for(
             role=view.own_role,

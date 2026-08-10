@@ -9,6 +9,7 @@ from pydantic import Field, model_validator
 
 from wolfscope.contracts import PlayerView, Seat, StrictModel
 from wolfscope.game.types import RoleType
+from wolfscope.agents.profile import SheriffInitiative
 
 from .brief import DecisionBrief
 
@@ -202,6 +203,7 @@ class StrategyBrief(StrictModel):
     methods: tuple[StrategyMethod, ...] = Field(max_length=5)
     warnings: tuple[StrategyWarning, ...] = Field(max_length=3)
     situation_tags: tuple[SituationTag, ...] = ()
+    sheriff_initiative: SheriffInitiative = SheriffInitiative.MEDIUM
     wolf_team_plan: WolfTeamPlan | None = None
 
     @model_validator(mode="after")
@@ -376,6 +378,7 @@ class StrategyBuilder:
         situation: DecisionBrief | None = None,
         situation_tags: tuple[SituationTag, ...] = (),
         wolf_team_plan: WolfTeamPlan | None = None,
+        sheriff_initiative: SheriffInitiative = SheriffInitiative.MEDIUM,
     ) -> StrategyBrief:
         priority_id, priority_description = {
             "speech": ("state_useful_position", "给出有信息价值且不泄露私密来源的公开立场。"),
@@ -402,13 +405,20 @@ class StrategyBuilder:
             priority_id=self.ROLE_PRIORITIES[role][0],
             description=self.ROLE_PRIORITIES[role][1],
         )
-        assignment_method = self._wolf_assignment_method(owner, wolf_team_plan)
+        assignment_method = self._wolf_assignment_method(owner, task, wolf_team_plan)
         deity_task_method = self._deity_task_method(role, task)
+        initiative_method = self._sheriff_initiative_method(
+            role,
+            task,
+            sheriff_initiative,
+        )
         methods = (
             [assignment_method]
             if assignment_method is not None
             else [deity_task_method]
             if deity_task_method is not None
+            else [initiative_method]
+            if initiative_method is not None
             else [
                 StrategyMethod(method_id=method_id, description=description)
                 for method_id, description in self.ROLE_METHODS[role]
@@ -434,6 +444,7 @@ class StrategyBuilder:
             methods=tuple(methods),
             warnings=tuple(warnings[:3]),
             situation_tags=situation_tags,
+            sheriff_initiative=sheriff_initiative,
             wolf_team_plan=(
                 wolf_team_plan if role is RoleType.WEREWOLF else None
             ),
@@ -463,6 +474,7 @@ class StrategyBuilder:
     @staticmethod
     def _wolf_assignment_method(
         owner: int,
+        task: str,
         plan: WolfTeamPlan | None,
     ) -> StrategyMethod | None:
         if plan is None:
@@ -473,6 +485,16 @@ class StrategyBuilder:
         )
         if assignment is None:
             return None
+        if task == "sheriff_signup":
+            if assignment.posture is WolfPosture.CLAIMANT:
+                return StrategyMethod(
+                    method_id="wolf_claimant_must_run",
+                    description="团队主跳者必须报名上警，以执行既定身份和假查验。",
+                )
+            return StrategyMethod(
+                method_id="wolf_nonclaimant_follow_plan",
+                description="非主跳狼人按支援、倒钩或隐藏分工决定留在警下，不抢主跳位置。",
+            )
         method_id, description = {
             WolfPosture.CLAIMANT: (
                 "execute_claimant_posture",
@@ -491,6 +513,30 @@ class StrategyBuilder:
                 "保持普通好人视角并提供可核对判断，不主动成为身份对跳中心。",
             ),
         }[assignment.posture]
+        return StrategyMethod(method_id=method_id, description=description)
+
+    @staticmethod
+    def _sheriff_initiative_method(
+        role: RoleType,
+        task: str,
+        initiative: SheriffInitiative,
+    ) -> StrategyMethod | None:
+        if task != "sheriff_signup" or role is RoleType.SEER:
+            return None
+        method_id, description = {
+            SheriffInitiative.HIGH: (
+                "high_sheriff_initiative",
+                "你有较高竞选意愿，可以主动上警并承担组织与归票责任。",
+            ),
+            SheriffInitiative.MEDIUM: (
+                "conditional_sheriff_initiative",
+                "只有能提出区别于通用套话的具体竞选价值时才上警，否则留在警下。",
+            ),
+            SheriffInitiative.LOW: (
+                "low_sheriff_initiative",
+                "你更倾向留在警下，用警长票观察和表达判断；没有特殊理由不报名。",
+            ),
+        }[initiative]
         return StrategyMethod(method_id=method_id, description=description)
 
     @staticmethod
