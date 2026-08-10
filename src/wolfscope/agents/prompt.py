@@ -35,6 +35,7 @@ STATIC_RULES = """本局采用标准九人屠边规则：3狼人、3平民、预
 女巫有一瓶解药和一瓶毒药；只能救当夜刀口，不能毒自己。猎人被刀或被放逐可以开枪，被毒不能开枪。
 狼人知道队友、每夜必须选择一个合法刀口且可以自刀；白天可以撒谎、悍跳和伪造查验。
 公开身份、查验、阵营和投票表达都只是发言者声明；只有当前玩家收到的私人事实才是确认信息。
+每条公开查验只能归属于实际发表该查验的玩家；甲没有查验乙时，不得从甲的视角称乙为金水、查杀或好人。对跳双方的查验体系必须分别记录，不能相互串联。
 第一天夜间技能后进行警长竞选，再公布死亡；后续按夜晚、公布死亡、白天发言、同时投票循环。警长拥有1.5票，平票会进入PK和一次重投。"""
 
 
@@ -70,7 +71,7 @@ def render_decision_prompt(
         DecisionTask.SHERIFF_CAMPAIGN: "完成警长竞选发言，说明竞选立场和组织信息的方法。",
         DecisionTask.SHERIFF_WITHDRAWAL: "听完全部竞选发言后决定是否退水。",
         DecisionTask.SHERIFF_VOTE: "从 candidates 中选择警长；判断不足时可以弃票。",
-        DecisionTask.WOLF_TARGET: "代表当前存活狼队选择今晚唯一合法刀口，并制定或更新一份全体存活狼人共享的私有 team_plan。team_plan 应明确共同 focus_target、简短 plan_reason、是否安排悍跳、由谁承担，以及其他狼人的冲锋、倒钩或隐藏姿态；允许战术性自刀。",
+        DecisionTask.WOLF_TARGET: "代表当前存活狼队选择今晚唯一合法刀口，并制定或更新一份全体存活狼人共享的私有 team_plan。team_plan 应明确共同 focus_target、简短 plan_reason、是否安排悍跳、由谁承担，以及其他狼人的冲锋、倒钩或隐藏姿态；允许战术性自刀。若延续预言家悍跳，每个新夜晚必须更新 fake_check_target，不能重复上一夜已经声称查验的目标。",
         DecisionTask.SEER_TARGET: "选择今晚的合法查验目标，不能查验自己或重复查验。",
         DecisionTask.WITCH_ACTION: "根据今晚刀口和剩余药物选择过夜、救人或毒人。",
         DecisionTask.SPEECH_DIRECTION: "作为警长选择今天顺时针或逆时针发言，自己最后发言。",

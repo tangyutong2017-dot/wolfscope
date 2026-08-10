@@ -16,6 +16,14 @@ from wolfscope.agents.schemas import (
     SpeechTaskObservation,
     VoteDecision,
     VoteTaskObservation,
+    WolfTargetDecision,
+    WolfTargetTaskObservation,
+)
+from wolfscope.cognition.strategy import (
+    StrategyBuilder,
+    WolfAssignment,
+    WolfPosture,
+    WolfTeamPlan,
 )
 from wolfscope.contracts import Visibility
 from wolfscope.game import DeathCause, GameState, PlayerState
@@ -234,6 +242,67 @@ class DecisionSchemaTests(unittest.IsolatedAsyncioTestCase):
 
 
 class FakeGatewayAndRuntimeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_repeated_fake_check_is_rejected_and_advanced_deterministically(self) -> None:
+        state = game_state()
+        state.day = 2
+        view = PlayerViewBuilder(state, EventLog()).build(1)
+        previous = WolfTeamPlan(
+            day=1,
+            objective="seer_counterclaim",
+            primary_claimant=2,
+            claimed_role="seer",
+            fake_check_target=4,
+            fake_check_alignment="good",
+            focus_target=4,
+            plan_reason="2号首日悍跳并给4号假金水",
+            assignments=(
+                WolfAssignment(seat=1, posture=WolfPosture.SUPPORT),
+                WolfAssignment(seat=2, posture=WolfPosture.CLAIMANT),
+                WolfAssignment(seat=3, posture=WolfPosture.DISTANCE),
+            ),
+        )
+        observation = WolfTargetTaskObservation(
+            actor=1,
+            wolf_seats=(1, 2, 3),
+            eligible_targets=tuple(range(1, 10)),
+        )
+        strategy = StrategyBuilder().build(
+            owner=1,
+            role=state.get_player(1).role,
+            day=2,
+            task="wolf_target",
+            wolf_team_plan=previous,
+        )
+        decision_input = AgentDecisionInput(
+            player_view=view,
+            public_summary=PublicGameSummary.from_view(view),
+            observation=observation,
+            strategy_brief=strategy,
+        )
+        repeated = WolfTargetDecision(
+            target=4,
+            confidence=0.8,
+            reason="错误重复上一夜假查验",
+            team_plan=previous.model_copy(update={"day": 2}),
+        )
+        runtime = PlayerRuntime(
+            1,
+            model_config_for(ModelProfile.TEST),
+            FakeModelGateway([repeated]),
+        )
+
+        decision = await runtime.decide(
+            task=DecisionTask.WOLF_TARGET,
+            decision_input=decision_input,
+            output_schema=WolfTargetDecision,
+        )
+
+        self.assertTrue(runtime.call_records[0].fallback_used)
+        self.assertEqual(runtime.call_records[0].error_type, "illegal_target")
+        self.assertEqual(decision.team_plan.primary_claimant, 2)
+        self.assertNotEqual(decision.team_plan.fake_check_target, 4)
+        self.assertEqual(decision.team_plan.day, 2)
+
     async def test_seer_badge_cannot_go_to_checked_wolf_and_prefers_gold(self) -> None:
         state = GameFactory.create(3)
         seer = next(player.seat for player in state.players if player.role.value == "seer")

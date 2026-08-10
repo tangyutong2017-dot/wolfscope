@@ -156,22 +156,70 @@ def safe_fallback_decision(
             for target in observation.eligible_targets
             if target not in observation.wolf_seats
         ]
+        target = (non_wolves or list(observation.eligible_targets))[0]
+        previous_plan = (
+            decision_input.strategy_brief.wolf_team_plan
+            if decision_input.strategy_brief is not None
+            else None
+        )
+        can_continue_seer_claim = (
+            previous_plan is not None
+            and previous_plan.claimed_role == "seer"
+            and previous_plan.primary_claimant in observation.wolf_seats
+        )
+        fake_candidates = [
+            seat
+            for seat in observation.eligible_targets
+            if seat not in observation.wolf_seats
+            and seat != target
+            and (
+                previous_plan is None
+                or seat != previous_plan.fake_check_target
+            )
+        ]
+        continue_seer_claim = can_continue_seer_claim and bool(fake_candidates)
+        primary_claimant = (
+            previous_plan.primary_claimant if continue_seer_claim else None
+        )
         payload = {
             "action": "wolf_target",
-            "target": (non_wolves or list(observation.eligible_targets))[0],
+            "target": target,
             "reason": "模型调用失败，使用确定性合法刀口。",
             "confidence": 0.0,
             "team_plan": {
                 "day": decision_input.player_view.day,
-                "objective": "hide",
-                "primary_claimant": None,
-                "claimed_role": None,
-                "fake_check_target": None,
-                "fake_check_alignment": None,
-                "focus_target": (non_wolves or list(observation.eligible_targets))[0],
-                "plan_reason": "模型失败后隐藏身份并采用确定性刀口。",
+                "objective": "seer_counterclaim" if continue_seer_claim else "hide",
+                "primary_claimant": primary_claimant,
+                "claimed_role": "seer" if continue_seer_claim else None,
+                "fake_check_target": fake_candidates[0] if continue_seer_claim else None,
+                "fake_check_alignment": "good" if continue_seer_claim else None,
+                "focus_target": target,
+                "plan_reason": (
+                    "模型失败后延续悍跳，并为新夜晚生成不重复的假查验。"
+                    if continue_seer_claim
+                    else "模型失败后隐藏身份并采用确定性刀口。"
+                ),
                 "assignments": [
-                    {"seat": seat, "posture": WolfPosture.HIDE.value}
+                    {
+                        "seat": seat,
+                        "posture": (
+                            WolfPosture.CLAIMANT.value
+                            if seat == primary_claimant
+                            else (
+                                next(
+                                    (
+                                        item.posture.value
+                                        for item in previous_plan.assignments
+                                        if item.seat == seat
+                                        and item.posture is not WolfPosture.CLAIMANT
+                                    ),
+                                    WolfPosture.SUPPORT.value,
+                                )
+                                if continue_seer_claim
+                                else WolfPosture.HIDE.value
+                            )
+                        ),
+                    }
                     for seat in observation.wolf_seats
                 ],
             },

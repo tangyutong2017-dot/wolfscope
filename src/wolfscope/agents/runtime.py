@@ -230,6 +230,22 @@ class PlayerRuntime:
                 decision.team_plan.focus_target is None
                 or decision.team_plan.focus_target in observation.eligible_targets
             )
+            previous_plan = (
+                decision_input.strategy_brief.wolf_team_plan
+                if decision_input.strategy_brief is not None
+                else None
+            )
+            if (
+                previous_plan is not None
+                and previous_plan.day < decision.team_plan.day
+                and previous_plan.claimed_role == "seer"
+                and decision.team_plan.claimed_role == "seer"
+                and previous_plan.primary_claimant == decision.team_plan.primary_claimant
+            ):
+                legal_target = legal_target and (
+                    decision.team_plan.fake_check_target
+                    != previous_plan.fake_check_target
+                )
         elif isinstance(decision, SeerTargetDecision):
             observation = decision_input.observation
             if not isinstance(observation, SeerTargetTaskObservation):

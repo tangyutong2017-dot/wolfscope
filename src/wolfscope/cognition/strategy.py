@@ -469,7 +469,7 @@ class StrategyBuilder:
         methods.append(
             StrategyMethod(
                 method_id="separate_claim_from_fact",
-                description="公开声明只代表发言者观点，不把它直接当成已验证事实。",
+                description="公开声明只代表发言者观点，不把它直接当成已验证事实；每条查验严格归属于其发言者，不得把一名预言家没有发表的查验结果塞进他的视角。",
             ),
         )
         warnings = self._warnings(role, situation, situation_tags)
@@ -605,7 +605,7 @@ class StrategyBuilder:
             warnings.append(
                 StrategyWarning(
                     warning_id="unverified_public_check",
-                    description="他人公开查验仍是声明，不能当作Engine确认事实。",
+                    description="他人公开查验仍是声明，不能当作Engine确认事实；check 的 speaker 是唯一归属者，对跳双方的查验体系不得串联或互相补全。",
                     evidence_ids=tuple(check.evidence_id for check in situation.checks[-2:]),
                 ),
             )
