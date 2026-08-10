@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from time import perf_counter
 from typing import Any, Protocol, TypeVar, get_args
@@ -176,10 +177,13 @@ class AgentScopeModelGateway:
                     if attempt and output_schema is SpeechDecision
                     else self._transport_schema(output_schema, decision_input)
                 )
-                response = await active_model.generate_structured_output(
-                    call_messages,
-                    active_schema,
-                    max_tokens=config.max_tokens,
+                response = await asyncio.wait_for(
+                    active_model.generate_structured_output(
+                        call_messages,
+                        active_schema,
+                        max_tokens=config.max_tokens,
+                    ),
+                    timeout=config.request_timeout_seconds,
                 )
                 self._validate_transport_target(response.content, active_schema)
                 if active_schema is SpeechRepairDecision:

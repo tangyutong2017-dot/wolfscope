@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import unittest
 from dataclasses import dataclass
@@ -49,6 +50,11 @@ class StubStructuredModel:
         return outcome
 
 
+class HangingStructuredModel:
+    async def generate_structured_output(self, messages, structured_model, **kwargs):
+        await asyncio.Event().wait()
+
+
 def valid_speech() -> StubResponse:
     return StubResponse(
         content={
@@ -74,6 +80,28 @@ def valid_speech_repair() -> StubResponse:
 
 
 class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
+    async def test_outer_timeout_bounds_a_stuck_transport(self) -> None:
+        gateway = AgentScopeModelGateway(HangingStructuredModel())
+        config = model_config_for(ModelProfile.TEST).model_copy(
+            update={"request_timeout_seconds": 0.01, "schema_repair_attempts": 0},
+        )
+
+        with self.assertRaises(ModelGatewayError) as raised:
+            await gateway.structured_call(
+                player=4,
+                task=DecisionTask.SPEECH,
+                decision_input=speech_input(),
+                output_schema=SpeechDecision,
+                config=config,
+            )
+
+        self.assertEqual(raised.exception.record.error_type, "request_error")
+        self.assertEqual(
+            raised.exception.record.failure_reason,
+            "request_exception",
+        )
+        self.assertLess(raised.exception.record.latency_ms, 500)
+
     async def test_routine_vote_uses_nonthinking_model_on_first_attempt(self) -> None:
         model = StubStructuredModel([])
         nonthinking_model = StubStructuredModel(
