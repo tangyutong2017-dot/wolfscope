@@ -201,6 +201,24 @@ class StrategyBuilderTests(unittest.TestCase):
         self.assertNotIn("use_vote_behavior", brief.strategy_ids)
         self.assertLessEqual(len(brief.methods), 3)
 
+    def test_deities_receive_task_specific_methods_without_larger_prompt(self) -> None:
+        cases = (
+            (RoleType.SEER, "seer_target", "check_influential_unknown"),
+            (RoleType.WITCH, "witch_action", "evaluate_medicine_value"),
+            (RoleType.HUNTER, "hunter_target", "shoot_only_with_auditable_basis"),
+            (RoleType.HUNTER, "death_last_words", "separate_words_from_shot"),
+        )
+        for role, task, expected_id in cases:
+            with self.subTest(role=role, task=task):
+                brief = StrategyBuilder().build(
+                    owner=7,
+                    role=role,
+                    day=1,
+                    task=task,
+                )
+                self.assertIn(expected_id, brief.strategy_ids)
+                self.assertLessEqual(len(brief.methods), 3)
+
 
 class StrategyRuntimeTests(unittest.IsolatedAsyncioTestCase):
     async def test_runtime_audits_strategy_ids(self) -> None:

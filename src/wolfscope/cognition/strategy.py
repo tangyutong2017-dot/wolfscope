@@ -303,6 +303,49 @@ class StrategyBuilder:
         ),
     }
 
+    DEITY_TASK_METHODS = {
+        (RoleType.SEER, "seer_target"): (
+            "check_influential_unknown",
+            "优先查验能明显缩小身份空间、影响下一轮站边或归票的未验玩家。",
+        ),
+        (RoleType.SEER, "sheriff_campaign"): (
+            "campaign_with_check_flow",
+            "竞选时准确公布已有查验，并给出可验证的后续验人方向与警徽处理思路。",
+        ),
+        (RoleType.SEER, "last_words"): (
+            "leave_complete_check_legacy",
+            "遗言完整留下全部真实查验、对跳关系和仍可验证的后续建议。",
+        ),
+        (RoleType.SEER, "death_last_words"): (
+            "leave_complete_check_legacy",
+            "遗言完整留下全部真实查验、对跳关系和仍可验证的后续建议。",
+        ),
+        (RoleType.WITCH, "witch_action"): (
+            "evaluate_medicine_value",
+            "分别比较救人、毒人和留药对当前轮次的确定收益；不因持有药物就机械使用。",
+        ),
+        (RoleType.WITCH, "last_words"): (
+            "leave_truthful_medicine_record",
+            "若选择公开女巫身份，只陈述真实刀口与用药记录，并区分事实和个人判断。",
+        ),
+        (RoleType.WITCH, "death_last_words"): (
+            "leave_truthful_medicine_record",
+            "若选择公开女巫身份，只陈述真实刀口与用药记录，并区分事实和个人判断。",
+        ),
+        (RoleType.HUNTER, "hunter_target"): (
+            "shoot_only_with_auditable_basis",
+            "比较已有查验、声明冲突和实际票型；误伤风险更高时明确选择不开枪。",
+        ),
+        (RoleType.HUNTER, "last_words"): (
+            "separate_words_from_shot",
+            "遗言只留下公开判断，不承诺枪权动作；开枪由随后独立任务决定。",
+        ),
+        (RoleType.HUNTER, "death_last_words"): (
+            "separate_words_from_shot",
+            "遗言只留下公开判断，不承诺枪权动作；开枪由随后独立任务决定。",
+        ),
+    }
+
     def build(
         self,
         *,
@@ -356,9 +399,12 @@ class StrategyBuilder:
             description=self.ROLE_PRIORITIES[role][1],
         )
         assignment_method = self._wolf_assignment_method(owner, wolf_team_plan)
+        deity_task_method = self._deity_task_method(role, task)
         methods = (
             [assignment_method]
             if assignment_method is not None
+            else [deity_task_method]
+            if deity_task_method is not None
             else [
                 StrategyMethod(method_id=method_id, description=description)
                 for method_id, description in self.ROLE_METHODS[role]
@@ -399,6 +445,16 @@ class StrategyBuilder:
             if tag in tag_set:
                 return StrategyMethod(method_id=method_id, description=description)
         return None
+
+    def _deity_task_method(
+        self,
+        role: RoleType,
+        task: str,
+    ) -> StrategyMethod | None:
+        item = self.DEITY_TASK_METHODS.get((role, task))
+        if item is None:
+            return None
+        return StrategyMethod(method_id=item[0], description=item[1])
 
     @staticmethod
     def _wolf_assignment_method(
