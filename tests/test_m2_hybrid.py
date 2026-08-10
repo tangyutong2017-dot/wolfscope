@@ -95,6 +95,8 @@ class HybridProviderIntegrationTests(unittest.IsolatedAsyncioTestCase):
                             "claimed_role": None,
                             "fake_check_target": None,
                             "fake_check_alignment": None,
+                            "focus_target": 4,
+                            "plan_reason": "隐藏身份并验证夜间计划",
                             "assignments": [
                                 {"seat": 1, "posture": "hide"},
                                 {"seat": 2, "posture": "hide"},

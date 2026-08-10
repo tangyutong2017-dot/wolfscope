@@ -72,6 +72,8 @@ class AdaptiveFakeGateway:
                     "claimed_role": None,
                     "fake_check_target": None,
                     "fake_check_alignment": None,
+                    "focus_target": target,
+                    "plan_reason": "隐藏身份并推进当前刀口",
                     "assignments": [
                         {"seat": seat, "posture": "hide"}
                         for seat in observation.wolf_seats

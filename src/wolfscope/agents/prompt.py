@@ -69,7 +69,7 @@ def render_decision_prompt(
         DecisionTask.SHERIFF_CAMPAIGN: "完成警长竞选发言，说明竞选立场和组织信息的方法。",
         DecisionTask.SHERIFF_WITHDRAWAL: "听完全部竞选发言后决定是否退水。",
         DecisionTask.SHERIFF_VOTE: "从 candidates 中选择警长；判断不足时可以弃票。",
-        DecisionTask.WOLF_TARGET: "代表当前存活狼队选择今晚唯一合法刀口，并制定或更新一份全体存活狼人共享的私有 team_plan。team_plan 应明确是否安排悍跳、由谁承担，以及其他狼人的冲锋、倒钩或隐藏姿态；允许战术性自刀。",
+        DecisionTask.WOLF_TARGET: "代表当前存活狼队选择今晚唯一合法刀口，并制定或更新一份全体存活狼人共享的私有 team_plan。team_plan 应明确共同 focus_target、简短 plan_reason、是否安排悍跳、由谁承担，以及其他狼人的冲锋、倒钩或隐藏姿态；允许战术性自刀。",
         DecisionTask.SEER_TARGET: "选择今晚的合法查验目标，不能查验自己或重复查验。",
         DecisionTask.WITCH_ACTION: "根据今晚刀口和剩余药物选择过夜、救人或毒人。",
         DecisionTask.SPEECH_DIRECTION: "作为警长选择今天顺时针或逆时针发言，自己最后发言。",

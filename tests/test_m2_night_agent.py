@@ -38,6 +38,8 @@ class NightAgentIntegrationTests(unittest.IsolatedAsyncioTestCase):
                     "claimed_role": "seer",
                     "fake_check_target": 4,
                     "fake_check_alignment": "good",
+                    "focus_target": 7,
+                    "plan_reason": "制造预言家对跳并保护倒钩位置",
                     "assignments": [
                         {"seat": 1, "posture": "support"},
                         {"seat": 2, "posture": "claimant"},
@@ -108,6 +110,14 @@ class NightAgentIntegrationTests(unittest.IsolatedAsyncioTestCase):
                 for item in wolf_signup_input.strategy_brief.wolf_team_plan.assignments
             ),
             ((1, "support"), (2, "claimant"), (3, "distance")),
+        )
+        self.assertEqual(
+            wolf_signup_input.strategy_brief.wolf_team_plan.focus_target,
+            7,
+        )
+        self.assertIn(
+            "execute_claimant_posture",
+            wolf_signup_input.strategy_brief.strategy_ids,
         )
         self.assertIsNone(good_signup_input.strategy_brief.wolf_team_plan)
 

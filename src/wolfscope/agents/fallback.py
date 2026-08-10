@@ -94,6 +94,8 @@ def safe_fallback_decision(
                 "claimed_role": None,
                 "fake_check_target": None,
                 "fake_check_alignment": None,
+                "focus_target": (non_wolves or list(observation.eligible_targets))[0],
+                "plan_reason": "模型失败后隐藏身份并采用确定性刀口。",
                 "assignments": [
                     {"seat": seat, "posture": WolfPosture.HIDE.value}
                     for seat in observation.wolf_seats

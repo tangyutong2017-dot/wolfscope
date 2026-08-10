@@ -135,6 +135,8 @@ class WolfTeamPlan(StrictModel):
     claimed_role: Literal["seer", "villager", "witch", "hunter"] | None = None
     fake_check_target: Seat | None = None
     fake_check_alignment: Literal["good", "werewolf"] | None = None
+    focus_target: Seat | None = None
+    plan_reason: str = Field(min_length=1, max_length=120)
     assignments: tuple[WolfAssignment, ...] = Field(min_length=1, max_length=3)
 
     @model_validator(mode="after")
@@ -351,10 +353,15 @@ class StrategyBuilder:
             priority_id=self.ROLE_PRIORITIES[role][0],
             description=self.ROLE_PRIORITIES[role][1],
         )
-        methods = [
-            StrategyMethod(method_id=method_id, description=description)
-            for method_id, description in self.ROLE_METHODS[role]
-        ]
+        assignment_method = self._wolf_assignment_method(owner, wolf_team_plan)
+        methods = (
+            [assignment_method]
+            if assignment_method is not None
+            else [
+                StrategyMethod(method_id=method_id, description=description)
+                for method_id, description in self.ROLE_METHODS[role]
+            ]
+        )
         situation_method = self._situation_method(role, situation_tags)
         if situation_method is not None:
             methods.append(situation_method)
@@ -390,6 +397,39 @@ class StrategyBuilder:
             if tag in tag_set:
                 return StrategyMethod(method_id=method_id, description=description)
         return None
+
+    @staticmethod
+    def _wolf_assignment_method(
+        owner: int,
+        plan: WolfTeamPlan | None,
+    ) -> StrategyMethod | None:
+        if plan is None:
+            return None
+        assignment = next(
+            (item for item in plan.assignments if item.seat == owner),
+            None,
+        )
+        if assignment is None:
+            return None
+        method_id, description = {
+            WolfPosture.CLAIMANT: (
+                "execute_claimant_posture",
+                "按团队计划承担悍跳，保持声称身份、假查验和后续叙事一致。",
+            ),
+            WolfPosture.SUPPORT: (
+                "execute_support_posture",
+                "只从公开逻辑支援团队主张，不暴露已知队友关系。",
+            ),
+            WolfPosture.DISTANCE: (
+                "execute_distance_posture",
+                "可公开质疑或切割队友，但理由必须来自公开信息并服务团队生存。",
+            ),
+            WolfPosture.HIDE: (
+                "execute_hide_posture",
+                "保持普通好人视角并提供可核对判断，不主动成为身份对跳中心。",
+            ),
+        }[assignment.posture]
+        return StrategyMethod(method_id=method_id, description=description)
 
     @staticmethod
     def _warnings(

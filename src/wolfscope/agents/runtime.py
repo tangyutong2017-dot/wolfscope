@@ -210,6 +210,10 @@ class PlayerRuntime:
                 decision.team_plan.primary_claimant is None
                 or decision.team_plan.primary_claimant in observation.wolf_seats
             )
+            legal_target = legal_target and (
+                decision.team_plan.focus_target is None
+                or decision.team_plan.focus_target in observation.eligible_targets
+            )
         elif isinstance(decision, SeerTargetDecision):
             observation = decision_input.observation
             if not isinstance(observation, SeerTargetTaskObservation):

@@ -34,9 +34,11 @@ StrategyBrief
 
 Strategy 不读取 GOD Replay，不替 Engine 判定规则，不把公开 Claim 当成事实，也不直接决定最终行动。LLM仍在一次结构化决策中选择策略与行动，Trace记录其引用的 Strategy ID 和 Evidence ID。
 
-## 粗颗粒度 v1
+## 局面感知策略 v2
 
-当前实现采用最小静态角色手册加少量动态风险：一句角色目标、最多3项优先级、5种方法和3条警告。本地 `StrategyBuilder` 不调用模型；发言与投票结果通过 `strategy_ids` 声明实际采用的方法，Runtime剔除并记录伪造ID。更细策略树、对手模型、RAG、长期规划和学习型策略留作后续扩展。
+当前实现保留小型策略输入，但从固定角色手册升级为确定性局面选择：一句角色目标、两项优先级、最多3种方法、3条警告和一组紧凑 `situation_tags`。标签只表达玩家视角内可验证的结构，例如单/多预言家声明、本人收到公开查杀、身份或票型冲突、轮次与残局压力；狼人额外拥有队友受压和主跳队友等私有标签。好人 Strategy 会拒绝狼队私有标签。
+
+每次只选择“一条角色或狼队姿态方法 + 一条最高优先级局面方法 + 事实/声明分离”，不会叠加全部匹配策略，也不会规定发言结构。本地 `StrategySituationBuilder` 和 `StrategyBuilder` 均不调用模型；所有决策通过 `strategy_ids` 声明实际采用的方法，Runtime剔除并记录伪造 ID。更细策略树、对手模型、RAG、长期规划和学习型策略留作后续扩展。
 
 ## 狼队共享战术计划
 
@@ -45,6 +47,7 @@ Strategy 不读取 GOD Replay，不替 Engine 判定规则，不把公开 Claim 
 - `objective`：隐藏、预言家对跳、压制预言家或混合路线；
 - `primary_claimant` / `claimed_role`：唯一主跳狼及其伪装身份；
 - `fake_check_target` / `fake_check_alignment`：悍跳预言家的完整假查验；
+- `focus_target` / `plan_reason`：本轮共同施压目标和不超过一句的计划依据；
 - `assignments`：每只存活狼的 `claimant/support/distance/hide` 姿态。
 
-Runtime 校验计划天数、存活狼人集合、唯一主跳狼和假查验字段一致性。合法计划进入 `AgentGameProvider.wolf_team_plan_history`，并只注入狼人后续的 `StrategyBrief`；好人视图和 Strategy 均不包含该字段。完整局诊断保存每夜计划，标准 GOD Replay 仍只记录 Engine 信息。模型调用失败时使用“全员隐藏、无人悍跳”的确定性合法计划，不中断对局。
+Runtime 校验计划天数、存活狼人集合、共同目标合法性、唯一主跳狼和假查验字段一致性。每夜由协调狼随刀口决策重新生成当日计划；合法计划进入 `AgentGameProvider.wolf_team_plan_history`，并只注入狼人后续的 `StrategyBrief`。每只狼根据自己的 assignment 获得不同的执行方法，好人视图和 Strategy 均不包含计划或私有标签。完整局诊断保存每夜计划，标准 GOD Replay 仍只记录 Engine 信息。模型调用失败时使用“全员隐藏、无人悍跳”的确定性合法计划，不中断对局。
