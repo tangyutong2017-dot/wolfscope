@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from time import perf_counter
-from typing import Any, Protocol, TypeVar
+from typing import Any, Protocol, TypeVar, get_args
 
 from agentscope.credential import DeepSeekCredential
 from agentscope.message import Msg, SystemMsg, UserMsg
@@ -174,13 +174,14 @@ class AgentScopeModelGateway:
                 active_schema = (
                     SpeechRepairDecision
                     if attempt and output_schema is SpeechDecision
-                    else output_schema
+                    else self._transport_schema(output_schema, decision_input)
                 )
                 response = await active_model.generate_structured_output(
                     call_messages,
                     active_schema,
                     max_tokens=config.max_tokens,
                 )
+                self._validate_transport_target(response.content, active_schema)
                 if active_schema is SpeechRepairDecision:
                     repaired = SpeechRepairDecision.model_validate(response.content)
                     value = output_schema.model_validate(
@@ -273,6 +274,41 @@ class AgentScopeModelGateway:
             else "AgentScope structured output failed"
         )
         raise ModelGatewayError(message, record) from last_error
+
+    @staticmethod
+    def _transport_schema(
+        output_schema: type[TModel],
+        decision_input: AgentDecisionInput,
+    ) -> type[TModel] | dict:
+        """Narrow target fields to the legal choices in this exact turn."""
+
+        observation = decision_input.observation
+        choices = getattr(observation, "candidates", None)
+        if choices is None:
+            choices = getattr(observation, "eligible_targets", None)
+        if choices is None or "target" not in output_schema.model_fields:
+            return output_schema
+        values = list(choices)
+        if type(None) in get_args(output_schema.model_fields["target"].annotation):
+            values.append(None)
+        schema = output_schema.model_json_schema()
+        target_schema = schema["properties"]["target"]
+        schema["properties"]["target"] = {
+            "title": target_schema.get("title", "Target"),
+            "enum": values,
+        }
+        return schema
+
+    @staticmethod
+    def _validate_transport_target(content: Any, schema: type[TModel] | dict) -> None:
+        """Keep fake/custom gateways subject to the same enum as AgentScope."""
+
+        if not isinstance(schema, dict) or not isinstance(content, dict):
+            return
+        target_schema = schema.get("properties", {}).get("target", {})
+        allowed = target_schema.get("enum")
+        if allowed is not None and content.get("target") not in allowed:
+            raise ValueError("target is outside the legal choices for this turn")
 
     @staticmethod
     def _messages(

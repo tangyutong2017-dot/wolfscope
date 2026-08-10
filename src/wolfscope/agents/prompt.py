@@ -209,7 +209,17 @@ def _model_payload(decision_input: AgentDecisionInput) -> dict:
         raise TypeError("unsupported task observation")
 
     evidence_context = None
-    if decision_input.evidence_context is not None:
+    evidence_free_tasks = {
+        "sheriff_signup",
+        "sheriff_withdrawal",
+        "sheriff_vote",
+        "seer_target",
+        "speech_direction",
+    }
+    if (
+        decision_input.evidence_context is not None
+        and observation.task not in evidence_free_tasks
+    ):
         compact = decision_input.complexity_level is ComplexityLevel.COMPACT
         evidence_context = decision_input.evidence_context.model_dump(
             mode="json",

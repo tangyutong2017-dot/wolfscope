@@ -100,6 +100,12 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(len(model.calls), 0)
         self.assertEqual(len(nonthinking_model.calls), 1)
+        transport_schema = nonthinking_model.calls[0][1]
+        self.assertIsInstance(transport_schema, dict)
+        self.assertEqual(
+            transport_schema["properties"]["target"]["enum"],
+            [1, 7, None],
+        )
         self.assertFalse(result.record.thinking_enabled)
         self.assertFalse(result.record.attempts[0].thinking_enabled)
         self.assertEqual(result.record.retry_count, 0)
@@ -123,6 +129,43 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(model.calls), 0)
         self.assertEqual(len(nonthinking_model.calls), 1)
         self.assertFalse(result.record.thinking_enabled)
+
+    async def test_illegal_transport_target_enters_short_repair(self) -> None:
+        model = StubStructuredModel([])
+        nonthinking_model = StubStructuredModel(
+            [
+                StubResponse(
+                    content={
+                        "target": 9,
+                        "confidence": 0.6,
+                        "reason": "错误目标",
+                    },
+                ),
+                StubResponse(
+                    content={
+                        "target": 7,
+                        "confidence": 0.5,
+                        "reason": "改为合法目标",
+                    },
+                ),
+            ],
+        )
+        gateway = AgentScopeModelGateway(model, nonthinking_model)
+
+        result = await gateway.structured_call(
+            player=4,
+            task=DecisionTask.VOTE,
+            decision_input=vote_input(),
+            output_schema=VoteDecision,
+            config=model_config_for(ModelProfile.TEST),
+        )
+
+        self.assertEqual(result.value.target, 7)
+        self.assertEqual(result.record.retry_count, 1)
+        self.assertEqual(
+            result.record.attempts[0].failure_reason,
+            "value_validation",
+        )
 
     async def test_renders_only_authorized_snapshot_and_tracks_usage(self) -> None:
         model = StubStructuredModel([valid_speech()])

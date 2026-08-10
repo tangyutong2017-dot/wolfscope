@@ -8,6 +8,7 @@ from wolfscope.agents.schemas import (
     AgentDecisionInput,
     DecisionTask,
     PublicGameSummary,
+    SeerTargetTaskObservation,
     VoteDecision,
     VoteContextMode,
     VoteTaskObservation,
@@ -48,6 +49,38 @@ def game_state() -> GameState:
 
 
 class DecisionBriefTests(unittest.TestCase):
+    def test_bounded_target_prompt_omits_unneeded_evidence_history(self) -> None:
+        events = EventLog()
+        speech = events.emit(
+            day=1, phase=Phase.DAY_SPEECH, event_type="day_speech",
+            visibility=Visibility.PUBLIC, actor=8,
+            content="只用于确认不会进入验人 Prompt 的历史文本",
+        )
+        view = PlayerViewBuilder(game_state(), events).build(4)
+        ledger = EvidenceLedger(owner=4)
+        ledger.sync(view)
+        ledger.ingest_public_claims(
+            event=speech,
+            speaker=8,
+            claims=(VoteIntentClaim(target=1, intent="vote", conditional=False, summary="8号投1号", supporting_text="今天投1号"),),
+            extractor_version="test",
+        )
+        decision_input = AgentDecisionInput(
+            player_view=view,
+            public_summary=PublicGameSummary.from_view(view),
+            observation=SeerTargetTaskObservation(
+                actor=4,
+                checked_seats=(),
+                eligible_targets=(1, 2),
+            ),
+            evidence_context=EvidenceContextBuilder().build(ledger),
+        )
+
+        prompt = render_decision_prompt(decision_input, DecisionTask.SEER_TARGET)
+
+        self.assertIn('"evidence_context": null', prompt)
+        self.assertNotIn("只用于确认不会进入验人 Prompt 的历史文本", prompt)
+
     def test_builds_task_focused_index_without_voting_recommendation(self) -> None:
         events = EventLog()
         speech = events.emit(
