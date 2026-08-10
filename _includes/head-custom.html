@@ -16,6 +16,18 @@
   }
 
   mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+
+  // cayman 的页头只有一个「View on GitHub」,项目页因此是死路 ——
+  // 补一个返回作品集主页的按钮。只影响 Pages,README 不受影响。
+  const header = document.querySelector(".page-header");
+  if (header) {
+    const home = document.createElement("a");
+    home.href = "https://tangyutong2017-dot.github.io/";
+    home.className = "btn";
+    home.textContent = "\u2190 作品集";
+    const firstBtn = header.querySelector(".btn");
+    header.insertBefore(home, firstBtn);
+  }
 </script>
 
 <style>
