@@ -203,6 +203,7 @@ class StrategyBuilderTests(unittest.TestCase):
 
     def test_deities_receive_task_specific_methods_without_larger_prompt(self) -> None:
         cases = (
+            (RoleType.SEER, "sheriff_signup", "seer_must_run_for_sheriff"),
             (RoleType.SEER, "seer_target", "check_influential_unknown"),
             (RoleType.WITCH, "witch_action", "evaluate_medicine_value"),
             (RoleType.HUNTER, "hunter_target", "shoot_only_with_auditable_basis"),

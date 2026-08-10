@@ -304,6 +304,10 @@ class StrategyBuilder:
     }
 
     DEITY_TASK_METHODS = {
+        (RoleType.SEER, "sheriff_signup"): (
+            "seer_must_run_for_sheriff",
+            "第一天具备报名资格时应当上警，准备公开真实首夜查验并争取警徽。",
+        ),
         (RoleType.SEER, "seer_target"): (
             "check_influential_unknown",
             "优先查验能明显缩小身份空间、影响下一轮站边或归票的未验玩家。",
