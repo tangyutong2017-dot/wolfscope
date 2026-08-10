@@ -133,6 +133,68 @@ class BeliefStateTests(unittest.TestCase):
         self.assertEqual(belief.conflicts[0].role, "seer")
         self.assertEqual(belief.conflicts[0].seats, (1, 7))
 
+    def test_day_one_single_seer_gets_high_provisional_trust_only(self) -> None:
+        events = EventLog()
+        speech = events.emit(
+            day=1,
+            phase=Phase.DAY_SPEECH,
+            event_type="day_speech",
+            visibility=Visibility.PUBLIC,
+            actor=7,
+            content="我是预言家",
+        )
+        ledger, _ = ledger_for(4, events)
+        ledger.ingest_public_claims(
+            event=speech,
+            speaker=7,
+            claims=(
+                RoleClaim(
+                    subject=7,
+                    role=RoleType.SEER,
+                    polarity=ClaimPolarity.ASSERT,
+                    summary="7号声称预言家",
+                    supporting_text="我是预言家",
+                ),
+            ),
+            extractor_version="test",
+        )
+
+        belief = BeliefStateBuilder().build(ledger)
+        claimant = belief.seat_beliefs[6]
+
+        self.assertEqual(claimant.trust_score, 0.75)
+        self.assertNotEqual(claimant.roles.seer, 1.0)
+
+    def test_single_seer_provisional_trust_expires_after_day_one(self) -> None:
+        events = EventLog()
+        speech = events.emit(
+            day=1,
+            phase=Phase.DAY_SPEECH,
+            event_type="day_speech",
+            visibility=Visibility.PUBLIC,
+            actor=7,
+            content="我是预言家",
+        )
+        events.emit(
+            day=2,
+            phase=Phase.DAWN_ANNOUNCEMENT,
+            event_type="peaceful_night",
+            visibility=Visibility.PUBLIC,
+            content="昨夜是平安夜",
+            data={"deaths": []},
+        )
+        ledger, _ = ledger_for(4, events)
+        ledger.ingest_public_claims(
+            event=speech,
+            speaker=7,
+            claims=(RoleClaim(subject=7, role=RoleType.SEER, polarity="assert", summary="7号声称预言家", supporting_text="我是预言家"),),
+            extractor_version="test",
+        )
+
+        belief = BeliefStateBuilder().build(ledger)
+
+        self.assertEqual(belief.seat_beliefs[6].trust_score, 0.0)
+
     def test_belief_revision_and_references_are_player_local(self) -> None:
         ledger, _ = ledger_for(4)
 

@@ -190,6 +190,7 @@ class StrategyBuilderTests(unittest.TestCase):
 
         self.assertIn(SituationTag.EARLY_GAME, tags)
         self.assertIn(SituationTag.SINGLE_SEER_CLAIM, tags)
+        self.assertIn(SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST, tags)
         self.assertIn(SituationTag.CLAIMED_WOLF_EXISTS, tags)
         self.assertIn(SituationTag.SELF_RECEIVED_WOLF_CHECK, tags)
         self.assertIn(SituationTag.SELF_UNDER_PRESSURE, tags)
@@ -266,6 +267,23 @@ class StrategyBuilderTests(unittest.TestCase):
         self.assertNotIn("compare_seer_claimants", brief.strategy_ids)
         self.assertNotIn("use_vote_behavior", brief.strategy_ids)
         self.assertLessEqual(len(brief.methods), 3)
+
+    def test_good_roles_treat_day_one_single_seer_as_high_trust_working_hypothesis(self) -> None:
+        expected = {
+            RoleType.VILLAGER: "provisionally_follow_single_seer",
+            RoleType.WITCH: "provisionally_follow_single_seer",
+            RoleType.HUNTER: "protect_provisional_single_seer",
+        }
+        for role, method_id in expected.items():
+            with self.subTest(role=role):
+                brief = StrategyBuilder().build(
+                    owner=4,
+                    role=role,
+                    day=1,
+                    task="speech",
+                    situation_tags=(SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST,),
+                )
+                self.assertIn(method_id, brief.strategy_ids)
 
     def test_deities_receive_task_specific_methods_without_larger_prompt(self) -> None:
         cases = (

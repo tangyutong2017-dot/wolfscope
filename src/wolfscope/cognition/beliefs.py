@@ -259,6 +259,42 @@ class BeliefStateBuilder:
             role: float(remaining[role]) / unconfirmed_count
             for role in RoleType
         } if unconfirmed_count else {}
+        current_day = max(
+            (record.occurred_at.day for record in ledger.records),
+            default=0,
+        )
+        day_one_seer_claimants = {
+            claim.subject
+            for claim in claimed_roles
+            if claim.day == 1
+            and claim.speaker == claim.subject
+            and claim.role is RoleType.SEER
+            and claim.polarity is ClaimPolarity.ASSERT
+        }
+        contradicted_day_one_seers = {
+            claimant
+            for claimant in day_one_seer_claimants
+            if any(
+                claim.day == 1
+                and claim.speaker == claimant
+                and claim.subject == claimant
+                and (
+                    (claim.role is RoleType.SEER and claim.polarity is ClaimPolarity.DENY)
+                    or (
+                        claim.role is not RoleType.SEER
+                        and claim.polarity is ClaimPolarity.ASSERT
+                    )
+                )
+                for claim in claimed_roles
+            )
+        }
+        provisional_single_seer = (
+            next(iter(day_one_seer_claimants))
+            if current_day <= 1
+            and len(day_one_seer_claimants) == 1
+            and not contradicted_day_one_seers
+            else None
+        )
         seat_beliefs: list[SeatBelief] = []
         for seat in range(1, 10):
             if seat in confirmed:
@@ -277,6 +313,9 @@ class BeliefStateBuilder:
                     camps=CampDistribution(
                         good=1.0 - wolf_probability,
                         werewolf=wolf_probability,
+                    ),
+                    trust_score=(
+                        0.75 if seat == provisional_single_seer else 0.0
                     ),
                     supporting_evidence_ids=tuple(hard_support[seat]),
                 ),

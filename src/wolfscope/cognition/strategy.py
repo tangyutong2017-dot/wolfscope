@@ -46,6 +46,7 @@ class SituationTag(StrEnum):
     """Small deterministic facts used to select strategies, never conclusions."""
 
     SINGLE_SEER_CLAIM = "single_seer_claim"
+    DAY_ONE_SINGLE_SEER_HIGH_TRUST = "day_one_single_seer_high_trust"
     MULTIPLE_SEER_CLAIMS = "multiple_seer_claims"
     SELF_UNDER_PRESSURE = "self_under_pressure"
     CLAIMED_WOLF_EXISTS = "claimed_wolf_exists"
@@ -105,6 +106,7 @@ class StrategySituationBuilder:
                 elif event.data.get("alignment") == "good":
                     tags.add(SituationTag.OWN_CONFIRMED_GOOD_CANDIDATE)
         if brief is not None:
+            conflict_kinds = {conflict.kind for conflict in brief.conflicts}
             seer_claimants = {
                 claim.speaker
                 for claim in brief.role_claims
@@ -114,6 +116,11 @@ class StrategySituationBuilder:
             }
             if len(seer_claimants) == 1:
                 tags.add(SituationTag.SINGLE_SEER_CLAIM)
+                if view.day == 1 and not conflict_kinds & {
+                    "unique_role_counterclaim",
+                    "self_role_claim_conflict",
+                }:
+                    tags.add(SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST)
             elif len(seer_claimants) > 1:
                 tags.add(SituationTag.MULTIPLE_SEER_CLAIMS)
             wolf_checks = {
@@ -129,7 +136,6 @@ class StrategySituationBuilder:
                 tags.add(SituationTag.SELF_UNDER_PRESSURE)
             if view.viewer_seat in good_checks:
                 tags.add(SituationTag.SELF_RECEIVED_GOOD_CHECK)
-            conflict_kinds = {conflict.kind for conflict in brief.conflicts}
             if conflict_kinds & {"unique_role_counterclaim", "self_role_claim_conflict"}:
                 tags.add(SituationTag.ROLE_CLAIM_CONFLICT)
             if "vote_behavior_conflict" in conflict_kinds:
@@ -302,7 +308,8 @@ class StrategyBuilder:
         RoleType.VILLAGER: (
             (SituationTag.SELF_RECEIVED_WOLF_CHECK, "answer_wolf_check", "被查杀时集中回应查验者的逻辑、时间线和团队关系，避免只重复身份表态。"),
             (SituationTag.MULTIPLE_SEER_CLAIMS, "compare_seer_claimants", "比较双方查验、警徽流、时间线和后续承诺，不因声量直接站边。"),
-            (SituationTag.SINGLE_SEER_CLAIM, "verify_single_seer", "单预言家局仍需核对查验和行为，不把无人对跳等同于Engine认证。"),
+            (SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST, "provisionally_follow_single_seer", "第一天只有一名预言家声明者且没有直接矛盾时，给予其较高暂定可信度，优先沿其查验形成工作判断；这仍不是Engine身份认证。"),
+            (SituationTag.SINGLE_SEER_CLAIM, "verify_single_seer", "第一天之后继续用后续查验、票型和警徽流复核单边预言家，不把声明升级为Engine认证。"),
             (SituationTag.VOTE_BEHAVIOR_CONFLICT, "use_vote_behavior", "区分公开票向与实际票型，要求冲突玩家解释变化。"),
             (SituationTag.ENDGAME_PRESSURE, "converge_endgame_vote", "残局减少无依据分票，明确比较候选人与可验证依据。"),
         ),
@@ -317,10 +324,13 @@ class StrategyBuilder:
         RoleType.WITCH: (
             (SituationTag.SELF_UNDER_PRESSURE, "reveal_witch_for_correction", "被强推时评估公开身份与真实药物信息能否纠错和自救。"),
             (SituationTag.MULTIPLE_SEER_CLAIMS, "observe_seer_conflict_privately", "对跳局结合公开信息判断，除非主动跳身份，不用刀口或药物私密信息证明站边。"),
+            (SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST, "provisionally_follow_single_seer", "第一天单边且无直接矛盾的预言家具有较高暂定可信度，优先沿其查验分析，同时保持女巫私密信息隔离。"),
             (SituationTag.ENDGAME_PRESSURE, "spend_witch_resources", "残局重新评估药物的即时胜负价值，避免为保留而保留。"),
         ),
         RoleType.HUNTER: (
             (SituationTag.SELF_UNDER_PRESSURE, "reveal_hunter_under_pressure", "被查杀、进PK或面临放逐时，评估公开枪权以降低误推风险。"),
+            (SituationTag.MULTIPLE_SEER_CLAIMS, "compare_seer_claimants", "对跳时比较双方查验、时间线和警徽流，不提前确认任何一方。"),
+            (SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST, "protect_provisional_single_seer", "第一天不得仅以身份尚未验证为由推、票或枪击唯一且无直接矛盾的预言家；先按高可信工作假设使用其查验。"),
             (SituationTag.VOTE_BEHAVIOR_CONFLICT, "prepare_shot_reasoning", "枪权候选优先参考查验、声明冲突与实际票型，而非单句情绪。"),
             (SituationTag.ENDGAME_PRESSURE, "use_decisive_shot", "残局枪权可能直接改变胜负；除非所有合法目标完全不可区分，否则应向已有依据下最高怀疑目标开枪。"),
         ),
