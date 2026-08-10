@@ -313,6 +313,10 @@ async def run_hybrid_day(
             "calls": len(records),
             "successful": sum(record.success for record in records),
             "fallbacks": sum(record.fallback_used for record in records),
+            "thinking_calls": sum(record.thinking_enabled for record in records),
+            "nonthinking_calls": sum(
+                not record.thinking_enabled for record in records
+            ),
             "input_tokens": sum(
                 record.token_usage.input_tokens for record in records
             ),
@@ -405,6 +409,10 @@ async def run_sheriff_election() -> dict:
             "calls": len(records),
             "successful": sum(record.success for record in records),
             "fallbacks": sum(record.fallback_used for record in records),
+            "thinking_calls": sum(record.thinking_enabled for record in records),
+            "nonthinking_calls": sum(
+                not record.thinking_enabled for record in records
+            ),
             "input_tokens": sum(
                 record.token_usage.input_tokens for record in records
             ),
@@ -472,6 +480,10 @@ async def run_night_actions() -> dict:
             "calls": len(records),
             "successful": sum(record.success for record in records),
             "fallbacks": sum(record.fallback_used for record in records),
+            "thinking_calls": sum(record.thinking_enabled for record in records),
+            "nonthinking_calls": sum(
+                not record.thinking_enabled for record in records
+            ),
             "input_tokens": sum(
                 record.token_usage.input_tokens for record in records
             ),
@@ -678,6 +690,10 @@ async def run_full_game(
             "calls": len(records),
             "successful": sum(record.success for record in records),
             "fallbacks": sum(record.fallback_used for record in records),
+            "thinking_calls": sum(record.thinking_enabled for record in records),
+            "nonthinking_calls": sum(
+                not record.thinking_enabled for record in records
+            ),
             "input_tokens": sum(
                 record.token_usage.input_tokens for record in records
             ),

@@ -133,6 +133,32 @@ class DecisionBriefTests(unittest.TestCase):
         self.assertEqual(len(brief.latest_vote_intents), 1)
         self.assertEqual(brief.latest_vote_intents[0].target, 7)
 
+    def test_excludes_claims_unrelated_to_current_vote_candidates(self) -> None:
+        events = EventLog()
+        speech = events.emit(
+            day=1, phase=Phase.DAY_SPEECH, event_type="day_speech",
+            visibility=Visibility.PUBLIC, actor=8,
+            content="我是预言家，查验9号是好人，今天投9号",
+        )
+        ledger = EvidenceLedger(owner=4)
+        ledger.sync(PlayerViewBuilder(game_state(), events).build(4))
+        ledger.ingest_public_claims(
+            event=speech,
+            speaker=8,
+            claims=(
+                RoleClaim(subject=8, role="seer", polarity="assert", summary="8号声称预言家", supporting_text="我是预言家"),
+                CheckClaim(target=9, night=1, result="good", summary="8号称9号为好人", supporting_text="查验9号是好人"),
+                VoteIntentClaim(target=9, intent="vote", conditional=False, summary="8号投9号", supporting_text="今天投9号"),
+            ),
+            extractor_version="test",
+        )
+
+        brief = DecisionBriefBuilder().build(ledger, day=1, candidates=(1, 7))
+
+        self.assertEqual(brief.role_claims, ())
+        self.assertEqual(brief.checks, ())
+        self.assertEqual(brief.latest_vote_intents, ())
+
     def test_keeps_latest_current_day_stance_toward_candidates(self) -> None:
         events = EventLog()
         old = events.emit(

@@ -6,12 +6,17 @@ from dataclasses import dataclass
 from typing import Any
 from unittest.mock import patch
 
-from wolfscope.agents.schemas import DecisionTask, SpeechDecision
+from wolfscope.agents.schemas import (
+    ComplexityLevel,
+    DecisionTask,
+    SpeechDecision,
+    VoteDecision,
+)
 from wolfscope.models.agentscope_gateway import AgentScopeModelGateway
 from wolfscope.models.config import ModelProfile, model_config_for
 from wolfscope.models.gateway import ModelGatewayError
 
-from tests.test_m2_runtime import speech_input
+from tests.test_m2_runtime import speech_input, vote_input
 
 
 @dataclass
@@ -69,6 +74,56 @@ def valid_speech_repair() -> StubResponse:
 
 
 class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
+    async def test_routine_vote_uses_nonthinking_model_on_first_attempt(self) -> None:
+        model = StubStructuredModel([])
+        nonthinking_model = StubStructuredModel(
+            [
+                StubResponse(
+                    content={
+                        "target": 1,
+                        "confidence": 0.6,
+                        "reason": "当前更怀疑1号",
+                    },
+                    usage=StubUsage(input_tokens=100, output_tokens=20),
+                ),
+            ],
+        )
+        gateway = AgentScopeModelGateway(model, nonthinking_model)
+
+        result = await gateway.structured_call(
+            player=4,
+            task=DecisionTask.VOTE,
+            decision_input=vote_input(),
+            output_schema=VoteDecision,
+            config=model_config_for(ModelProfile.TEST),
+        )
+
+        self.assertEqual(len(model.calls), 0)
+        self.assertEqual(len(nonthinking_model.calls), 1)
+        self.assertFalse(result.record.thinking_enabled)
+        self.assertFalse(result.record.attempts[0].thinking_enabled)
+        self.assertEqual(result.record.retry_count, 0)
+
+    async def test_compact_speech_uses_nonthinking_model(self) -> None:
+        model = StubStructuredModel([])
+        nonthinking_model = StubStructuredModel([valid_speech()])
+        gateway = AgentScopeModelGateway(model, nonthinking_model)
+        decision_input = speech_input().model_copy(
+            update={"complexity_level": ComplexityLevel.COMPACT},
+        )
+
+        result = await gateway.structured_call(
+            player=4,
+            task=DecisionTask.SPEECH,
+            decision_input=decision_input,
+            output_schema=SpeechDecision,
+            config=model_config_for(ModelProfile.TEST),
+        )
+
+        self.assertEqual(len(model.calls), 0)
+        self.assertEqual(len(nonthinking_model.calls), 1)
+        self.assertFalse(result.record.thinking_enabled)
+
     async def test_renders_only_authorized_snapshot_and_tracks_usage(self) -> None:
         model = StubStructuredModel([valid_speech()])
         gateway = AgentScopeModelGateway(model)

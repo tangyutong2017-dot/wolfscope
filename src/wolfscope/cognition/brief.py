@@ -148,7 +148,9 @@ class DecisionBriefBuilder:
             if not isinstance(content, PublicClaimEvidence):
                 continue
             claim = content.claim
-            if isinstance(claim, RoleClaim):
+            if isinstance(claim, RoleClaim) and (
+                claim.subject in candidate_set or content.speaker in candidate_set
+            ):
                 role_claims.append(
                     RoleClaimBrief(
                         speaker=content.speaker,
@@ -158,7 +160,9 @@ class DecisionBriefBuilder:
                         evidence_id=record.evidence_id,
                     ),
                 )
-            elif isinstance(claim, CheckClaim):
+            elif isinstance(claim, CheckClaim) and (
+                claim.target in candidate_set or content.speaker in candidate_set
+            ):
                 checks.append(
                     CheckBrief(
                         speaker=content.speaker,
@@ -171,6 +175,7 @@ class DecisionBriefBuilder:
             elif (
                 isinstance(claim, VoteIntentClaim)
                 and record.occurred_at.day == day
+                and claim.target in candidate_set
             ):
                 latest_intents[content.speaker] = (
                     record.known_order,
@@ -210,10 +215,23 @@ class DecisionBriefBuilder:
             candidates=candidate_items,
             role_claims=tuple(role_claims),
             checks=tuple(checks),
-            conflicts=belief.conflicts,
+            conflicts=tuple(
+                conflict
+                for conflict in belief.conflicts
+                if _conflict_mentions_candidates(conflict, candidate_set)
+            ),
             latest_vote_intents=tuple(
                 item[1]
                 for item in sorted(latest_intents.values(), key=lambda pair: pair[0])
             ),
             latest_stances=tuple(item[1] for item in selected_stances),
         )
+
+
+def _conflict_mentions_candidates(
+    conflict: BeliefConflict,
+    candidate_set: set[int],
+) -> bool:
+    if conflict.kind == "unique_role_counterclaim":
+        return bool(set(conflict.seats) & candidate_set)
+    return conflict.seat in candidate_set

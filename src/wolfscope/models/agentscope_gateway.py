@@ -60,6 +60,36 @@ class AgentScopeModelGateway:
         self.records: list[ModelCallRecord] = []
         self.messages: list[tuple[Msg, ...]] = []
 
+    _ALWAYS_NONTHINKING_TASKS = frozenset(
+        {
+            DecisionTask.VOTE,
+            DecisionTask.SHERIFF_SIGNUP,
+            DecisionTask.SHERIFF_WITHDRAWAL,
+            DecisionTask.SHERIFF_VOTE,
+            DecisionTask.SEER_TARGET,
+            DecisionTask.WITCH_ACTION,
+            DecisionTask.SPEECH_DIRECTION,
+            DecisionTask.HUNTER_TARGET,
+            DecisionTask.BADGE_TRANSFER,
+        },
+    )
+
+    @classmethod
+    def _use_thinking(
+        cls,
+        *,
+        task: DecisionTask,
+        decision_input: AgentDecisionInput,
+        config: DeepSeekModelConfig,
+    ) -> bool:
+        """Reserve expensive reasoning for planning and consequential speech."""
+
+        if not config.thinking_enabled or task in cls._ALWAYS_NONTHINKING_TASKS:
+            return False
+        if task is DecisionTask.SPEECH:
+            return decision_input.complexity_level is ComplexityLevel.FULL
+        return True
+
     @classmethod
     def from_environment(
         cls,
@@ -115,6 +145,11 @@ class AgentScopeModelGateway:
         last_error: Exception | None = None
         attempt_records: list[ModelAttemptRecord] = []
         attempts = config.schema_repair_attempts + 1
+        initial_thinking = self._use_thinking(
+            task=task,
+            decision_input=decision_input,
+            config=config,
+        )
         for attempt in range(attempts):
             attempt_started = perf_counter()
             stage = "generation" if attempt == 0 else "schema_repair"
@@ -131,7 +166,11 @@ class AgentScopeModelGateway:
                     ),
                 ]
             try:
-                active_model = self._model if attempt == 0 else self._repair_model
+                active_model = (
+                    self._model
+                    if attempt == 0 and initial_thinking
+                    else self._repair_model
+                )
                 active_schema = (
                     SpeechRepairDecision
                     if attempt and output_schema is SpeechDecision
@@ -163,7 +202,7 @@ class AgentScopeModelGateway:
                         success=False,
                         latency_ms=self._elapsed_ms(attempt_started),
                         failure_reason=self._failure_reason(error),
-                        thinking_enabled=config.thinking_enabled if attempt == 0 else False,
+                        thinking_enabled=initial_thinking if attempt == 0 else False,
                     ),
                 )
                 continue
@@ -176,7 +215,7 @@ class AgentScopeModelGateway:
                         success=False,
                         latency_ms=self._elapsed_ms(attempt_started),
                         failure_reason=failure_reason,
-                        thinking_enabled=config.thinking_enabled if attempt == 0 else False,
+                        thinking_enabled=initial_thinking if attempt == 0 else False,
                     ),
                 )
                 last_error = error
@@ -190,13 +229,14 @@ class AgentScopeModelGateway:
                     success=True,
                     latency_ms=self._elapsed_ms(attempt_started),
                     token_usage=usage,
-                    thinking_enabled=config.thinking_enabled if attempt == 0 else False,
+                    thinking_enabled=initial_thinking if attempt == 0 else False,
                 ),
             )
             record = self._record(
                 player=player,
                 task=task,
                 config=config,
+                thinking_enabled=initial_thinking,
                 response=response,
                 started=started,
                 success=True,
@@ -214,6 +254,7 @@ class AgentScopeModelGateway:
             player=player,
             task=task,
             config=config,
+            thinking_enabled=initial_thinking,
             response=None,
             started=started,
             success=False,
@@ -252,6 +293,7 @@ class AgentScopeModelGateway:
         player: int,
         task: DecisionTask,
         config: DeepSeekModelConfig,
+        thinking_enabled: bool,
         response: Any,
         started: float,
         success: bool,
@@ -269,7 +311,7 @@ class AgentScopeModelGateway:
             player=player,
             task=task,
             model_name=config.model_name,
-            thinking_enabled=config.thinking_enabled,
+            thinking_enabled=thinking_enabled,
             success=success,
             latency_ms=max(0, round((perf_counter() - started) * 1000)),
             retry_count=retry_count,
