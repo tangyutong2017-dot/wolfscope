@@ -78,7 +78,7 @@ def render_decision_prompt(
         DecisionTask.LAST_WORDS: "你即将因本轮放逐出局；完成最后遗言，不得描述自己未来仍会参与后续轮次。",
         DecisionTask.DEATH_LAST_WORDS: "你已在当前死亡批次中死亡；这是首夜死讯公布后、第一天白天发言前，不能等待或引用尚未发生的白天发言和票型。完成唯一一次死亡遗言，不得假设自己未来再次出局或继续行动。若你是可开枪猎人，本任务只发表遗言，不得承诺开枪、不开枪或具体目标；遗言结束后 Engine 会立即用独立任务询问枪权。",
         DecisionTask.HUNTER_TARGET: "你已经死亡且正在结算唯一一次猎人枪权；当前不能等待任何未来发言或票型，必须根据已有信息决定立即开枪或永久不开枪。残局或遗言已有明确最高怀疑目标时应优先开枪，不能笼统以误伤风险回避决定；如开枪只能选择 eligible_targets。",
-        DecisionTask.BADGE_TRANSFER: "你已经死亡且正在结算警徽；立即移交给 eligible_targets 中一人，或 target=null 永久撕毁。",
+        DecisionTask.BADGE_TRANSFER: "你已经死亡且正在结算警徽。若你是预言家，必须执行所有玩家都知道的标准警徽流：本夜查验为金水就传给本夜新金水；本夜查验为狼人就传给最近存活旧金水，没有存活旧金水则 target=null 撕徽。其他身份立即移交给 eligible_targets 中一人，或撕毁。",
     }[task]
     payload = _model_payload(decision_input)
     speech_limit = SpeechPolicy.limit_for(task)

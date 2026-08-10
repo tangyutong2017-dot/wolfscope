@@ -13,6 +13,7 @@ from wolfscope.game import (
 )
 from wolfscope.game.config import STANDARD_9_RULES
 from wolfscope.game.events import EventLog
+from wolfscope.game.types import Phase
 from wolfscope.game.resolution import (
     BadgeTransferObservation,
     DeathResolutionEngine,
@@ -131,6 +132,65 @@ class DeathResolutionTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.badge_destroyed)
         self.assertIsNone(state.sheriff.holder)
         self.assertFalse(state.sheriff.badge_exists)
+
+    async def test_seer_badge_flow_publicly_decodes_latest_good(self) -> None:
+        state = game_state()
+        state.sheriff.holder = 7
+        state.sheriff.election_completed = True
+        state.mark_dead(7, DeathCause.WEREWOLF)
+        state.sheriff.transfer_pending_from = 7
+        events = EventLog()
+        events.emit(
+            day=2,
+            phase=Phase.NIGHT_SEER,
+            event_type="seer_result",
+            visibility=Visibility.PRIVATE,
+            recipients=(7,),
+            actor=7,
+            target=4,
+            data={"target": 4, "alignment": "good"},
+        )
+
+        result = await DeathResolutionEngine(state, events).resolve(
+            (7,), ScriptedResolutionProvider(badge_target=4),
+        )
+
+        transfer = next(event for event in result.events if event.event_type == "badge_transferred")
+        self.assertEqual(
+            transfer.data["badge_flow"],
+            {"check_target": 4, "alignment": "good"},
+        )
+        self.assertIn("最后查验声明为4号好人", transfer.content)
+
+    async def test_seer_badge_flow_publicly_decodes_latest_wolf_by_old_gold(self) -> None:
+        state = game_state()
+        state.sheriff.holder = 7
+        state.sheriff.election_completed = True
+        state.mark_dead(7, DeathCause.WEREWOLF)
+        state.sheriff.transfer_pending_from = 7
+        events = EventLog()
+        for target, alignment in ((4, "good"), (1, "werewolf")):
+            events.emit(
+                day=2,
+                phase=Phase.NIGHT_SEER,
+                event_type="seer_result",
+                visibility=Visibility.PRIVATE,
+                recipients=(7,),
+                actor=7,
+                target=target,
+                data={"target": target, "alignment": alignment},
+            )
+
+        result = await DeathResolutionEngine(state, events).resolve(
+            (7,), ScriptedResolutionProvider(badge_target=4),
+        )
+
+        transfer = next(event for event in result.events if event.event_type == "badge_transferred")
+        self.assertEqual(
+            transfer.data["badge_flow"],
+            {"check_target": 1, "alignment": "werewolf"},
+        )
+        self.assertIn("最后查验声明为1号狼人", transfer.content)
 
     async def test_invalid_decisions_fall_back_without_public_leak(self) -> None:
         state = game_state()

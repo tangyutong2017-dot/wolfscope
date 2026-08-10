@@ -10,6 +10,7 @@ from .claims import PublicClaim
 from .evidence import (
     ActualVoteFact,
     BadgeDestroyedFact,
+    BadgeFlowClaimFact,
     BadgeTransferredFact,
     DawnDeathFact,
     EpistemicStatus,
@@ -335,8 +336,14 @@ class DeterministicEvidenceProjector:
             items.append(ProjectedEvidence("hunter_no_shot", HunterDidNotShootFact(hunter=event.actor)))
         elif event_type == "badge_transferred":
             items.append(ProjectedEvidence("badge_transfer", BadgeTransferredFact(former_sheriff=data["from"], new_sheriff=data["to"])))
+            if data.get("badge_flow"):
+                flow = data["badge_flow"]
+                items.append(ProjectedEvidence("badge_flow", BadgeFlowClaimFact(seer_claimant=event.actor, check_target=flow["check_target"], alignment=flow["alignment"]), epistemic_status=EpistemicStatus.CLAIMED, extraction_method=ExtractionMethod.RULE_DERIVATION))
         elif event_type == "badge_destroyed":
             items.append(ProjectedEvidence("badge_destroyed", BadgeDestroyedFact(former_sheriff=event.actor)))
+            if data.get("badge_flow"):
+                flow = data["badge_flow"]
+                items.append(ProjectedEvidence("badge_flow", BadgeFlowClaimFact(seer_claimant=event.actor, check_target=flow["check_target"], alignment=flow["alignment"]), epistemic_status=EpistemicStatus.CLAIMED, extraction_method=ExtractionMethod.RULE_DERIVATION))
         elif event_type in cls._SPEECH_CONTEXTS and event.actor is not None:
             items.append(
                 ProjectedEvidence(

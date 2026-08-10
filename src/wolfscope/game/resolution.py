@@ -193,6 +193,7 @@ class DeathResolutionEngine:
                     self._emit_invalid_fallback("badge_target", pending_sheriff, choice)
                     choice = None
             self.state.sheriff.transfer_pending_from = None
+            badge_flow = self._seer_badge_flow_signal(pending_sheriff, choice)
             if choice is None:
                 badge_destroyed = True
                 self.state.sheriff.holder = None
@@ -203,7 +204,13 @@ class DeathResolutionEngine:
                     event_type="badge_destroyed",
                     visibility=Visibility.PUBLIC,
                     actor=pending_sheriff,
-                    content=f"{pending_sheriff}号撕毁警徽",
+                    content=(
+                        f"{pending_sheriff}号撕毁警徽；按公共警徽流，"
+                        f"其最后查验声明为{badge_flow['check_target']}号狼人"
+                        if badge_flow is not None
+                        else f"{pending_sheriff}号撕毁警徽"
+                    ),
+                    data={"badge_flow": badge_flow} if badge_flow is not None else {},
                 )
             else:
                 self.state.sheriff.holder = choice
@@ -215,8 +222,18 @@ class DeathResolutionEngine:
                     visibility=Visibility.PUBLIC,
                     actor=pending_sheriff,
                     target=choice,
-                    content=f"{pending_sheriff}号将警徽移交给{choice}号",
-                    data={"from": pending_sheriff, "to": choice},
+                    content=(
+                        f"{pending_sheriff}号将警徽移交给{choice}号；按公共警徽流，"
+                        f"其最后查验声明为{badge_flow['check_target']}号"
+                        f"{'好人' if badge_flow['alignment'] == 'good' else '狼人'}"
+                        if badge_flow is not None
+                        else f"{pending_sheriff}号将警徽移交给{choice}号"
+                    ),
+                    data={
+                        "from": pending_sheriff,
+                        "to": choice,
+                        **({"badge_flow": badge_flow} if badge_flow is not None else {}),
+                    },
                 )
 
         self._check_winner()
@@ -230,6 +247,42 @@ class DeathResolutionEngine:
             badge_destroyed,
             start_index,
         )
+
+    def _seer_badge_flow_signal(
+        self,
+        former_sheriff: int,
+        choice: int | None,
+    ) -> dict[str, int | str] | None:
+        """Decode a dead seer's standard badge flow into a public claim."""
+
+        if self.state.get_player(former_sheriff).role is not RoleType.SEER:
+            return None
+        checks = [
+            event
+            for event in self.events
+            if event.event_type == "seer_result" and event.actor == former_sheriff
+        ]
+        if not checks:
+            return None
+        latest = checks[-1]
+        alignment = latest.data.get("alignment")
+        if alignment == Camp.GOOD.value and choice == latest.target:
+            return {"check_target": latest.target, "alignment": Camp.GOOD.value}
+        if alignment != Camp.WEREWOLF.value:
+            return None
+        eligible = set(self.state.alive_seats())
+        prior_good = next(
+            (
+                event.target
+                for event in reversed(checks[:-1])
+                if event.target in eligible
+                and event.data.get("alignment") == Camp.GOOD.value
+            ),
+            None,
+        )
+        if choice == prior_good:
+            return {"check_target": latest.target, "alignment": Camp.WEREWOLF.value}
+        return None
 
     def _latest_last_words(self, seat: int) -> str | None:
         return next(

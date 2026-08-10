@@ -294,6 +294,52 @@ class FakeGatewayAndRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(runtime.call_records[0].invalid_target, wolf)
         self.assertTrue(runtime.call_records[0].fallback_used)
 
+    async def test_seer_latest_wolf_result_returns_badge_to_latest_old_gold(self) -> None:
+        state = GameFactory.create(3)
+        seer = next(player.seat for player in state.players if player.role.value == "seer")
+        wolf = next(player.seat for player in state.players if player.role.value == "werewolf")
+        goods = [
+            player.seat
+            for player in state.players
+            if player.role.value == "villager"
+        ]
+        events = EventLog()
+        for target, alignment in ((goods[0], "good"), (goods[1], "good"), (wolf, "werewolf")):
+            events.emit(
+                day=2,
+                phase=Phase.NIGHT_SEER,
+                event_type="seer_result",
+                visibility=Visibility.PRIVATE,
+                recipients=(seer,),
+                actor=seer,
+                target=target,
+                data={"target": target, "alignment": alignment},
+            )
+        state.mark_dead(seer, DeathCause.WEREWOLF)
+        view = PlayerViewBuilder(state, events).build_terminal_action(seer)
+        decision_input = AgentDecisionInput(
+            player_view=view,
+            public_summary=PublicGameSummary.from_view(view),
+            observation=BadgeTransferTaskObservation(
+                actor=seer,
+                eligible_targets=tuple(player.seat for player in state.players if player.alive),
+            ),
+        )
+        runtime = PlayerRuntime(
+            seer,
+            model_config_for(ModelProfile.TEST),
+            FakeModelGateway([BadgeTransferDecision(target=wolf, confidence=0.5, reason="错误")]),
+        )
+
+        decision = await runtime.decide(
+            task=DecisionTask.BADGE_TRANSFER,
+            decision_input=decision_input,
+            output_schema=BadgeTransferDecision,
+        )
+
+        self.assertEqual(decision.target, goods[1])
+        self.assertEqual(runtime.call_records[0].error_type, "seer_badge_constraint")
+
     async def test_seer_vote_is_constrained_by_own_confirmed_wolf(self) -> None:
         decision_input = seer_vote_input(alignment="werewolf", target=1)
         runtime = PlayerRuntime(

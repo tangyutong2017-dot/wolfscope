@@ -4,6 +4,8 @@ import unittest
 
 from wolfscope.cognition.evidence import (
     ActualVoteFact,
+    BadgeFlowClaimFact,
+    EpistemicStatus,
     HunterDidNotShootFact,
     OwnRoleFact,
     RawSpeech,
@@ -170,6 +172,37 @@ class EvidenceLedgerTests(unittest.TestCase):
             if isinstance(record.content, HunterDidNotShootFact)
         )
         self.assertEqual(fact.hunter, 9)
+
+    def test_badge_flow_is_shared_as_a_claim_not_verified_alignment(self) -> None:
+        state = fixed_state()
+        events = EventLog()
+        events.emit(
+            day=2,
+            phase=Phase.BADGE_TRANSFER,
+            event_type="badge_transferred",
+            visibility=Visibility.PUBLIC,
+            actor=7,
+            target=4,
+            content="7号警徽流声明1号是狼人",
+            data={
+                "from": 7,
+                "to": 4,
+                "badge_flow": {"check_target": 1, "alignment": "werewolf"},
+            },
+        )
+        ledger = EvidenceLedger(owner=6)
+
+        ledger.sync(PlayerViewBuilder(state, events).build(6))
+
+        record = next(
+            item
+            for item in ledger.records
+            if isinstance(item.content, BadgeFlowClaimFact)
+        )
+        self.assertEqual(record.content.seer_claimant, 7)
+        self.assertEqual(record.content.check_target, 1)
+        self.assertEqual(record.content.alignment, "werewolf")
+        self.assertEqual(record.epistemic_status, EpistemicStatus.CLAIMED)
 
     def test_witch_victim_occurs_before_it_becomes_known(self) -> None:
         state = fixed_state()

@@ -22,6 +22,39 @@ from .schemas import (
 TModel = TypeVar("TModel", bound=BaseModel)
 
 
+def seer_badge_flow_target(decision_input: AgentDecisionInput) -> int | None:
+    """Resolve the standard badge flow from the seer's ordered private checks.
+
+    A latest good result receives the badge.  A latest wolf result is signalled
+    by passing the badge to the most recent earlier living good; without one,
+    the badge is destroyed.
+    """
+
+    observation = decision_input.observation
+    if not isinstance(observation, BadgeTransferTaskObservation):
+        raise TypeError("badge flow requires badge observation")
+    eligible = set(observation.eligible_targets)
+    checks = [
+        event
+        for event in decision_input.player_view.visible_events
+        if event.event_type == "seer_result"
+        and event.actor == decision_input.player_view.viewer_seat
+    ]
+    if not checks:
+        return None
+    latest = checks[-1]
+    if latest.data.get("alignment") == "good":
+        return latest.target if latest.target in eligible else None
+    return next(
+        (
+            event.target
+            for event in reversed(checks[:-1])
+            if event.target in eligible and event.data.get("alignment") == "good"
+        ),
+        None,
+    )
+
+
 def safe_fallback_decision(
     *,
     task: DecisionTask,
@@ -199,25 +232,14 @@ def safe_fallback_decision(
             raise TypeError("badge fallback requires badge observation")
         target = None
         if decision_input.player_view.own_role.value == "seer":
-            eligible = set(observation.eligible_targets)
-            target = next(
-                (
-                    event.target
-                    for event in reversed(decision_input.player_view.visible_events)
-                    if event.event_type == "seer_result"
-                    and event.actor == seat
-                    and event.target in eligible
-                    and event.data.get("alignment") == "good"
-                ),
-                None,
-            )
+            target = seer_badge_flow_target(decision_input)
         payload = {
             "action": "badge_transfer",
             "target": target,
             "reason": (
-                "模型决策不合法，警徽改交本人存活金水。"
+                "模型决策不符合警徽流，改为传给本夜金水或最近存活旧金水。"
                 if target is not None
-                else "模型决策不合法且没有存活金水，确定性撕毁警徽。"
+                else "模型决策不符合警徽流且没有合法接收者，确定性撕毁警徽。"
             ),
             "confidence": 0.0,
         }

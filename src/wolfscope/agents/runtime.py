@@ -7,7 +7,7 @@ from typing import Callable, TypeVar
 
 from pydantic import BaseModel
 
-from wolfscope.agents.fallback import safe_fallback_decision
+from wolfscope.agents.fallback import safe_fallback_decision, seer_badge_flow_target
 from wolfscope.models.config import DeepSeekModelConfig
 from wolfscope.models.gateway import (
     ModelCallRecord,
@@ -291,27 +291,8 @@ class PlayerRuntime:
             observation = decision_input.observation
             if not isinstance(observation, BadgeTransferTaskObservation):
                 raise TypeError("BadgeTransferDecision requires badge observation")
-            eligible = set(observation.eligible_targets)
-            confirmed_wolves = {
-                event.target
-                for event in view.visible_events
-                if event.event_type == "seer_result"
-                and event.actor == self.seat
-                and event.target in eligible
-                and event.data.get("alignment") == "werewolf"
-            }
-            confirmed_goods = {
-                event.target
-                for event in view.visible_events
-                if event.event_type == "seer_result"
-                and event.actor == self.seat
-                and event.target in eligible
-                and event.data.get("alignment") == "good"
-            }
-            violates_check = decision.target in confirmed_wolves or (
-                bool(confirmed_goods) and decision.target not in confirmed_goods
-            )
-            if violates_check:
+            expected_target = seer_badge_flow_target(decision_input)
+            if decision.target != expected_target:
                 self.call_records.append(
                     record.model_copy(
                         update={

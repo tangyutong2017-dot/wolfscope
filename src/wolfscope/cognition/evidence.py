@@ -191,6 +191,13 @@ class BadgeDestroyedFact(EvidenceModel):
     former_sheriff: Seat
 
 
+class BadgeFlowClaimFact(EvidenceModel):
+    content_type: Literal["badge_flow_claim_fact"] = "badge_flow_claim_fact"
+    seer_claimant: Seat
+    check_target: Seat
+    alignment: Camp
+
+
 class RawSpeech(EvidenceModel):
     content_type: Literal["raw_speech"] = "raw_speech"
     speaker: Seat
@@ -232,6 +239,7 @@ EvidenceContent = Annotated[
     | HunterDidNotShootFact
     | BadgeTransferredFact
     | BadgeDestroyedFact
+    | BadgeFlowClaimFact
     | RawSpeech
     | PublicClaimEvidence,
     Field(discriminator="content_type"),

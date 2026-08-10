@@ -348,8 +348,8 @@ class StrategyBuilder:
             "遗言完整留下全部真实查验、对跳关系和仍可验证的后续建议。",
         ),
         (RoleType.SEER, "badge_transfer"): (
-            "transfer_badge_by_own_checks",
-            "警徽不得交给本人真实查杀；存在存活金水时必须交给金水，否则再按公开可信度选择或撕徽。",
+            "follow_standard_badge_flow",
+            "严格执行公共警徽流：本夜验出金水就把警徽交给该新金水；本夜验出狼人就交给最近查验且仍存活的旧金水，没有存活旧金水则撕徽。",
         ),
         (RoleType.WITCH, "witch_action"): (
             "evaluate_medicine_value",
