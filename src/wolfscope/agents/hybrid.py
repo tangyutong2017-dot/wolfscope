@@ -169,7 +169,13 @@ class AgentGameProvider:
                 ),
             )
             decision_brief = (
-                strategy_situation if isinstance(observation, VoteTaskObservation) else None
+                self.decision_brief_builder.build(
+                    ledger,
+                    day=view.day,
+                    candidates=observation.candidates,
+                )
+                if isinstance(observation, VoteTaskObservation)
+                else None
             )
         else:
             evidence_context = None
