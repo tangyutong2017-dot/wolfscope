@@ -347,6 +347,10 @@ class StrategyBuilder:
             "leave_complete_check_legacy",
             "遗言完整留下全部真实查验、对跳关系和仍可验证的后续建议。",
         ),
+        (RoleType.SEER, "badge_transfer"): (
+            "transfer_badge_by_own_checks",
+            "警徽不得交给本人真实查杀；存在存活金水时必须交给金水，否则再按公开可信度选择或撕徽。",
+        ),
         (RoleType.WITCH, "witch_action"): (
             "evaluate_medicine_value",
             "分别比较救人、毒人和留药对当前轮次的确定收益；不因持有药物就机械使用。",

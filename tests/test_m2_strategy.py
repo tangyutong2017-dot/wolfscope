@@ -271,6 +271,7 @@ class StrategyBuilderTests(unittest.TestCase):
         cases = (
             (RoleType.SEER, "sheriff_signup", "seer_must_run_for_sheriff"),
             (RoleType.SEER, "seer_target", "check_influential_unknown"),
+            (RoleType.SEER, "badge_transfer", "transfer_badge_by_own_checks"),
             (RoleType.WITCH, "witch_action", "evaluate_medicine_value"),
             (RoleType.HUNTER, "hunter_target", "shoot_only_with_auditable_basis"),
             (RoleType.HUNTER, "death_last_words", "separate_words_from_shot"),

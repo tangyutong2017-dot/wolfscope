@@ -287,6 +287,48 @@ class PlayerRuntime:
                 decision_input=decision_input,
                 output_schema=output_schema,
             )
+        if isinstance(decision, BadgeTransferDecision) and view.own_role.value == "seer":
+            observation = decision_input.observation
+            if not isinstance(observation, BadgeTransferTaskObservation):
+                raise TypeError("BadgeTransferDecision requires badge observation")
+            eligible = set(observation.eligible_targets)
+            confirmed_wolves = {
+                event.target
+                for event in view.visible_events
+                if event.event_type == "seer_result"
+                and event.actor == self.seat
+                and event.target in eligible
+                and event.data.get("alignment") == "werewolf"
+            }
+            confirmed_goods = {
+                event.target
+                for event in view.visible_events
+                if event.event_type == "seer_result"
+                and event.actor == self.seat
+                and event.target in eligible
+                and event.data.get("alignment") == "good"
+            }
+            violates_check = decision.target in confirmed_wolves or (
+                bool(confirmed_goods) and decision.target not in confirmed_goods
+            )
+            if violates_check:
+                self.call_records.append(
+                    record.model_copy(
+                        update={
+                            "success": False,
+                            "fallback_used": True,
+                            "error_type": "seer_badge_constraint",
+                            "invalid_target": decision.target,
+                            "final_complexity_level": ComplexityLevel.DETERMINISTIC.value,
+                        },
+                    ),
+                )
+                self.last_view_revision = view.view_revision
+                return safe_fallback_decision(
+                    task=task,
+                    decision_input=decision_input,
+                    output_schema=output_schema,
+                )
         if isinstance(decision, (VoteDecision, SheriffVoteDecision)):
             observation = decision_input.observation
             if not isinstance(

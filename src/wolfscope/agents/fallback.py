@@ -194,12 +194,31 @@ def safe_fallback_decision(
             "confidence": 0.0,
         }
     elif task is DecisionTask.BADGE_TRANSFER:
-        if not isinstance(decision_input.observation, BadgeTransferTaskObservation):
+        observation = decision_input.observation
+        if not isinstance(observation, BadgeTransferTaskObservation):
             raise TypeError("badge fallback requires badge observation")
+        target = None
+        if decision_input.player_view.own_role.value == "seer":
+            eligible = set(observation.eligible_targets)
+            target = next(
+                (
+                    event.target
+                    for event in reversed(decision_input.player_view.visible_events)
+                    if event.event_type == "seer_result"
+                    and event.actor == seat
+                    and event.target in eligible
+                    and event.data.get("alignment") == "good"
+                ),
+                None,
+            )
         payload = {
             "action": "badge_transfer",
-            "target": None,
-            "reason": "模型调用失败，确定性撕毁警徽。",
+            "target": target,
+            "reason": (
+                "模型决策不合法，警徽改交本人存活金水。"
+                if target is not None
+                else "模型决策不合法且没有存活金水，确定性撕毁警徽。"
+            ),
             "confidence": 0.0,
         }
     else:  # pragma: no cover - protects future enum extensions

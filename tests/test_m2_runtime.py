@@ -7,6 +7,8 @@ from pydantic import ValidationError
 from wolfscope.agents.runtime import PlayerRuntime, PlayerRuntimeRegistry
 from wolfscope.agents.schemas import (
     AgentDecisionInput,
+    BadgeTransferDecision,
+    BadgeTransferTaskObservation,
     ComplexityLevel,
     DecisionTask,
     PublicGameSummary,
@@ -16,8 +18,9 @@ from wolfscope.agents.schemas import (
     VoteTaskObservation,
 )
 from wolfscope.contracts import Visibility
-from wolfscope.game import GameState, PlayerState
+from wolfscope.game import DeathCause, GameState, PlayerState
 from wolfscope.game.config import STANDARD_9_RULES
+from wolfscope.game.factory import GameFactory
 from wolfscope.game.day import ExileVoteRound
 from wolfscope.game.events import EventLog
 from wolfscope.game.types import Phase
@@ -231,6 +234,66 @@ class DecisionSchemaTests(unittest.IsolatedAsyncioTestCase):
 
 
 class FakeGatewayAndRuntimeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_seer_badge_cannot_go_to_checked_wolf_and_prefers_gold(self) -> None:
+        state = GameFactory.create(3)
+        seer = next(player.seat for player in state.players if player.role.value == "seer")
+        wolf = next(player.seat for player in state.players if player.role.value == "werewolf")
+        good = next(
+            player.seat
+            for player in state.players
+            if player.role.value == "villager"
+        )
+        events = EventLog()
+        for target, alignment in ((wolf, "werewolf"), (good, "good")):
+            events.emit(
+                day=2,
+                phase=Phase.NIGHT_SEER,
+                event_type="seer_result",
+                visibility=Visibility.PRIVATE,
+                recipients=(seer,),
+                actor=seer,
+                target=target,
+                content=f"查验{target}号为{alignment}",
+                data={"target": target, "alignment": alignment},
+            )
+        state.mark_dead(seer, DeathCause.WEREWOLF)
+        view = PlayerViewBuilder(state, events).build_terminal_action(seer)
+        decision_input = AgentDecisionInput(
+            player_view=view,
+            public_summary=PublicGameSummary.from_view(view),
+            observation=BadgeTransferTaskObservation(
+                actor=seer,
+                eligible_targets=tuple(
+                    player.seat for player in state.players if player.alive
+                ),
+            ),
+        )
+        runtime = PlayerRuntime(
+            seer,
+            model_config_for(ModelProfile.TEST),
+            FakeModelGateway(
+                [
+                    BadgeTransferDecision(
+                        target=wolf,
+                        confidence=0.8,
+                        reason="错误交给本人查杀",
+                    ),
+                ],
+            ),
+        )
+
+        decision = await runtime.decide(
+            task=DecisionTask.BADGE_TRANSFER,
+            decision_input=decision_input,
+            output_schema=BadgeTransferDecision,
+            use_safe_fallback=True,
+        )
+
+        self.assertEqual(decision.target, good)
+        self.assertEqual(runtime.call_records[0].error_type, "seer_badge_constraint")
+        self.assertEqual(runtime.call_records[0].invalid_target, wolf)
+        self.assertTrue(runtime.call_records[0].fallback_used)
+
     async def test_seer_vote_is_constrained_by_own_confirmed_wolf(self) -> None:
         decision_input = seer_vote_input(alignment="werewolf", target=1)
         runtime = PlayerRuntime(
