@@ -11,8 +11,18 @@ from agentscope.message import Msg, SystemMsg, UserMsg
 from agentscope.model import DeepSeekChatModel
 from pydantic import BaseModel, ValidationError
 
-from wolfscope.agents.prompt import SYSTEM_PROMPT, render_decision_prompt
-from wolfscope.agents.schemas import AgentDecisionInput, DecisionTask
+from wolfscope.agents.prompt import (
+    SYSTEM_PROMPT,
+    render_decision_prompt,
+    render_minimal_repair_prompt,
+)
+from wolfscope.agents.schemas import (
+    AgentDecisionInput,
+    ComplexityLevel,
+    DecisionTask,
+    SpeechDecision,
+    SpeechRepairDecision,
+)
 
 from .config import DeepSeekModelConfig
 from .gateway import (
@@ -110,23 +120,40 @@ class AgentScopeModelGateway:
             stage = "generation" if attempt == 0 else "schema_repair"
             call_messages = list(messages)
             if attempt:
-                call_messages.append(
+                call_messages = [
+                    SystemMsg(
+                        name="game_master",
+                        content="你正在修复一次狼人杀决策。只提交指定结构，不输出思维过程。",
+                    ),
                     UserMsg(
                         name="engine",
-                        content=(
-                            "上一次输出未通过结构化校验。请重新提交完全符合 "
-                            f"{output_schema.__name__} Schema 的结果，不要添加其他内容。"
-                        ),
+                        content=render_minimal_repair_prompt(decision_input, task),
                     ),
-                )
+                ]
             try:
                 active_model = self._model if attempt == 0 else self._repair_model
+                active_schema = (
+                    SpeechRepairDecision
+                    if attempt and output_schema is SpeechDecision
+                    else output_schema
+                )
                 response = await active_model.generate_structured_output(
                     call_messages,
-                    output_schema,
+                    active_schema,
                     max_tokens=config.max_tokens,
                 )
-                value = output_schema.model_validate(response.content)
+                if active_schema is SpeechRepairDecision:
+                    repaired = SpeechRepairDecision.model_validate(response.content)
+                    value = output_schema.model_validate(
+                        {
+                            **repaired.model_dump(),
+                            "confidence": 0.5,
+                            "event_ids": (),
+                            "evidence_ids": (),
+                        },
+                    )
+                else:
+                    value = output_schema.model_validate(response.content)
             except (ValidationError, RuntimeError, ValueError) as error:
                 last_error = error
                 attempt_records.append(
@@ -175,6 +202,8 @@ class AgentScopeModelGateway:
                 success=True,
                 retry_count=attempt,
                 attempts=tuple(attempt_records),
+                initial_complexity_level=decision_input.complexity_level,
+                complexity_reason=decision_input.complexity_reason,
             )
             self.records.append(record)
             return ModelCallResult(value=value, record=record)
@@ -193,6 +222,8 @@ class AgentScopeModelGateway:
             failure_stage=last_attempt.stage,
             failure_reason=last_attempt.failure_reason,
             attempts=tuple(attempt_records),
+            initial_complexity_level=decision_input.complexity_level,
+            complexity_reason=decision_input.complexity_reason,
         )
         self.records.append(record)
         message = (
@@ -229,6 +260,8 @@ class AgentScopeModelGateway:
         failure_stage: str | None = None,
         failure_reason: str | None = None,
         attempts: tuple[ModelAttemptRecord, ...] = (),
+        initial_complexity_level: ComplexityLevel = ComplexityLevel.FULL,
+        complexity_reason: str = "default_full",
     ) -> ModelCallRecord:
         usage = self._usage(response)
         return ModelCallRecord(
@@ -245,6 +278,13 @@ class AgentScopeModelGateway:
             failure_stage=failure_stage,
             failure_reason=failure_reason,
             attempts=attempts,
+            initial_complexity_level=initial_complexity_level.value,
+            final_complexity_level=(
+                ComplexityLevel.MINIMAL_REPAIR.value
+                if retry_count > 0 and success
+                else initial_complexity_level.value
+            ),
+            complexity_reason=complexity_reason,
         )
 
     @staticmethod

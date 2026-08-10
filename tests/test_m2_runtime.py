@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from wolfscope.agents.runtime import PlayerRuntime, PlayerRuntimeRegistry
 from wolfscope.agents.schemas import (
     AgentDecisionInput,
+    ComplexityLevel,
     DecisionTask,
     PublicGameSummary,
     SpeechDecision,
@@ -103,7 +104,7 @@ class ModelConfigTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValidationError):
             config.model_name = "changed"  # type: ignore[misc]
 
-    async def test_vote_uses_larger_output_budget_without_changing_speech(self) -> None:
+    async def test_speech_and_vote_use_two_thousand_output_budget(self) -> None:
         gateway = FakeModelGateway(
             [
                 SpeechDecision(action="speak", speech="发言", intent="测试", confidence=0.5),
@@ -123,7 +124,7 @@ class ModelConfigTests(unittest.IsolatedAsyncioTestCase):
             output_schema=VoteDecision,
         )
 
-        self.assertEqual(gateway.configs[0].max_tokens, 1500)
+        self.assertEqual(gateway.configs[0].max_tokens, 2000)
         self.assertEqual(gateway.configs[1].max_tokens, 2000)
 
 
@@ -267,6 +268,10 @@ class FakeGatewayAndRuntimeTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn("4号", decision.speech or "")
         self.assertTrue(runtime.call_records[0].fallback_used)
         self.assertFalse(runtime.call_records[0].success)
+        self.assertEqual(
+            runtime.call_records[0].final_complexity_level,
+            ComplexityLevel.DETERMINISTIC.value,
+        )
 
     async def test_illegal_vote_target_becomes_audited_abstention(self) -> None:
         gateway = FakeModelGateway(

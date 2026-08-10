@@ -8,6 +8,7 @@ from wolfscope.agents.schemas import (
     AgentDecisionInput,
     BadgeTransferTaskObservation,
     DeathLastWordsTaskObservation,
+    ComplexityLevel,
     DecisionTask,
     PlayerContext,
     HunterTargetTaskObservation,
@@ -103,7 +104,11 @@ def _model_payload(decision_input: AgentDecisionInput) -> dict:
         task_context = {
             "task": "speech",
             "speaking_order": observation.speaking_order,
-            "previous_speeches": observation.previous_speeches,
+            "previous_speeches": (
+                observation.previous_speeches[-3:]
+                if decision_input.complexity_level is ComplexityLevel.COMPACT
+                else observation.previous_speeches
+            ),
             "can_explode": observation.can_explode,
         }
     elif isinstance(observation, VoteTaskObservation):
@@ -205,6 +210,7 @@ def _model_payload(decision_input: AgentDecisionInput) -> dict:
 
     evidence_context = None
     if decision_input.evidence_context is not None:
+        compact = decision_input.complexity_level is ComplexityLevel.COMPACT
         evidence_context = decision_input.evidence_context.model_dump(
             mode="json",
             exclude={
@@ -212,7 +218,7 @@ def _model_payload(decision_input: AgentDecisionInput) -> dict:
                 "ledger_revision",
                 *(
                     {"public_claims"}
-                    if decision_input.vote_context_mode
+                    if compact or decision_input.vote_context_mode
                     in {VoteContextMode.BALANCED, VoteContextMode.COMPACT}
                     else set()
                 ),
@@ -242,4 +248,30 @@ def _model_payload(decision_input: AgentDecisionInput) -> dict:
         "situation_brief": situation_brief,
         "strategy_brief": strategy_brief,
         "vote_context_mode": decision_input.vote_context_mode.value,
+        "complexity_level": decision_input.complexity_level.value,
     }
+
+
+def render_minimal_repair_prompt(
+    decision_input: AgentDecisionInput,
+    task: DecisionTask,
+) -> str:
+    """L2 prompt: retain legal task facts and one compact strategy only."""
+
+    payload = _model_payload(
+        decision_input.model_copy(
+            update={"complexity_level": ComplexityLevel.COMPACT},
+        ),
+    )
+    strategy = payload.get("strategy_brief") or {}
+    methods = strategy.get("methods") or []
+    strategy["methods"] = methods[:1]
+    payload["strategy_brief"] = strategy
+    payload["evidence_context"] = None
+    payload["situation_brief"] = None
+    payload["complexity_level"] = ComplexityLevel.MINIMAL_REPAIR.value
+    return (
+        "上一次完整决策没有形成合法结构。不要重新展开长篇推理。"
+        "仅根据以下最小授权信息提交合法结果；不得补充未提供的事实。\n"
+        + json.dumps(payload, ensure_ascii=False, indent=2)
+    )

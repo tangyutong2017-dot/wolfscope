@@ -625,6 +625,33 @@ async def run_full_game(
                     record.token_usage.output_tokens for record in task_records
                 ),
             }
+    complexity_stats = {}
+    for level in sorted({record.initial_complexity_level for record in records}):
+        level_records = [
+            record for record in records if record.initial_complexity_level == level
+        ]
+        complexity_stats[level] = {
+            "calls": len(level_records),
+            "successful_without_downgrade": sum(
+                record.success and record.final_complexity_level == level
+                for record in level_records
+            ),
+            "recovered_at_l2": sum(
+                record.final_complexity_level == "l2_minimal_repair"
+                for record in level_records
+            ),
+            "fell_to_l3": sum(
+                record.final_complexity_level == "l3_deterministic"
+                for record in level_records
+            ),
+            "input_tokens": sum(
+                record.token_usage.input_tokens for record in level_records
+            ),
+            "output_tokens": sum(
+                record.token_usage.output_tokens for record in level_records
+            ),
+            "latency_ms": sum(record.latency_ms for record in level_records),
+        }
     return {
         "scenario": "full-game",
         "game_id": result.game_id,
@@ -668,6 +695,7 @@ async def run_full_game(
                 record.speech_truncated for record in records
             ),
             "by_task": task_stats,
+            "by_initial_complexity": complexity_stats,
         },
         "extraction_summary": {
             "calls": len(extraction_records),

@@ -20,6 +20,7 @@ from .schemas import (
     BadgeTransferDecision,
     BadgeTransferTaskObservation,
     DecisionTask,
+    ComplexityLevel,
     HunterTargetDecision,
     HunterTargetTaskObservation,
     SheriffVoteDecision,
@@ -81,7 +82,12 @@ class PlayerRuntime:
         except ModelGatewayError as error:
             record = error.record
             if use_safe_fallback:
-                record = record.model_copy(update={"fallback_used": True})
+                record = record.model_copy(
+                    update={
+                        "fallback_used": True,
+                        "final_complexity_level": ComplexityLevel.DETERMINISTIC.value,
+                    },
+                )
                 self.call_records.append(record)
                 self.last_view_revision = view.view_revision
                 return safe_fallback_decision(
@@ -103,7 +109,17 @@ class PlayerRuntime:
             for event_id in submitted_event_ids
             if event_id not in visible_event_ids
         )
-        record = result.record
+        record = result.record.model_copy(
+            update={
+                "initial_complexity_level": decision_input.complexity_level.value,
+                "final_complexity_level": (
+                    ComplexityLevel.MINIMAL_REPAIR.value
+                    if result.record.retry_count > 0
+                    else decision_input.complexity_level.value
+                ),
+                "complexity_reason": decision_input.complexity_reason,
+            },
+        )
         if invalid_event_ids:
             decision = decision.model_copy(
                 update={
@@ -261,6 +277,7 @@ class PlayerRuntime:
                         "fallback_used": True,
                         "error_type": "illegal_target",
                         "invalid_target": decision.target,
+                        "final_complexity_level": ComplexityLevel.DETERMINISTIC.value,
                     },
                 ),
             )

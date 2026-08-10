@@ -54,6 +54,9 @@ class ModelCallRecord(StrictModel):
     speech_original_chars: int | None = Field(default=None, ge=0)
     speech_final_chars: int | None = Field(default=None, ge=0)
     speech_truncated: bool = False
+    initial_complexity_level: str = "l0_full"
+    final_complexity_level: str = "l0_full"
+    complexity_reason: str = "default_full"
 
 
 TModel = TypeVar("TModel", bound=BaseModel)

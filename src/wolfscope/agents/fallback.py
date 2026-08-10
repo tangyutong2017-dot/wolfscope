@@ -6,7 +6,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from wolfscope.cognition.strategy import WolfPosture
+from wolfscope.cognition.strategy import SituationTag, WolfPosture
 
 from .schemas import (
     AgentDecisionInput,
@@ -32,17 +32,58 @@ def safe_fallback_decision(
 
     seat = decision_input.player_view.viewer_seat
     if task is DecisionTask.SPEECH:
+        tags = set(
+            decision_input.strategy_brief.situation_tags
+            if decision_input.strategy_brief is not None
+            else ()
+        )
+        if SituationTag.SELF_RECEIVED_WOLF_CHECK in tags:
+            speech = f"{seat}号不接受对我的公开查杀，请结合查验者的时间线、发言和实际票型判断。"
+        elif SituationTag.MULTIPLE_SEER_CLAIMS in tags:
+            speech = "当前存在预言家对跳和冲突查验，我暂不把任何一方的公开声明当作确定事实。"
+        elif SituationTag.VOTE_BEHAVIOR_CONFLICT in tags:
+            speech = "当前存在发言票向与实际投票不一致，相关玩家需要解释立场变化。"
+        elif SituationTag.ENDGAME_PRESSURE in tags:
+            speech = "当前已进入关键轮次，应减少无依据分票，并围绕可核对的查验、冲突和票型归票。"
+        else:
+            speech = f"{seat}号当前没有新增确定事实，会结合后续发言和实际票型判断。"
         payload = {
             "action": "speak",
-            "speech": f"{seat}号本轮暂时没有新增信息，继续听取其他玩家发言。",
-            "intent": "模型调用失败后的最小公开发言",
+            "speech": speech,
+            "intent": "模型失败后的局面感知保底发言",
             "confidence": 0.0,
         }
     elif task is DecisionTask.VOTE:
+        observation = decision_input.observation
+        legal_candidates = set(getattr(observation, "candidates", ()))
+        target = None
+        strategy = decision_input.strategy_brief
+        if (
+            strategy is not None
+            and strategy.wolf_team_plan is not None
+            and strategy.wolf_team_plan.focus_target in legal_candidates
+        ):
+            target = strategy.wolf_team_plan.focus_target
+        if target is None:
+            target = next(
+                (
+                    event.target
+                    for event in reversed(decision_input.player_view.visible_events)
+                    if event.event_type == "seer_result"
+                    and event.actor == seat
+                    and event.target in legal_candidates
+                    and event.data.get("alignment") == "werewolf"
+                ),
+                None,
+            )
         payload = {
             "action": "vote",
-            "target": None,
-            "reason": "模型调用失败，本轮弃票。",
+            "target": target,
+            "reason": (
+                "模型失败后依据本人确认查验或狼队共同目标投票。"
+                if target is not None
+                else "模型失败且没有确定性合法依据，本轮弃票。"
+            ),
             "confidence": 0.0,
         }
     elif task is DecisionTask.SHERIFF_SIGNUP:

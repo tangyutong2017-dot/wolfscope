@@ -56,6 +56,18 @@ def valid_speech() -> StubResponse:
     )
 
 
+def valid_speech_repair() -> StubResponse:
+    return StubResponse(
+        content={
+            "action": "speak",
+            "speech": "4号认为当前信息不足，先听后置位发言。",
+            "intent": "保留判断并公开当前立场",
+            "strategy_ids": [],
+        },
+        usage=StubUsage(input_tokens=90, output_tokens=30),
+    )
+
+
 class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
     async def test_renders_only_authorized_snapshot_and_tracks_usage(self) -> None:
         model = StubStructuredModel([valid_speech()])
@@ -91,7 +103,7 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
         model = StubStructuredModel(
             [RuntimeError("Failed to generate structured output for model.")],
         )
-        repair_model = StubStructuredModel([valid_speech()])
+        repair_model = StubStructuredModel([valid_speech_repair()])
         gateway = AgentScopeModelGateway(model, repair_model)
 
         result = await gateway.structured_call(
@@ -105,7 +117,7 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(model.calls), 1)
         self.assertEqual(len(repair_model.calls), 1)
         repair_prompt = repair_model.calls[0][0][-1].get_text_content()
-        self.assertIn("未通过结构化校验", repair_prompt)
+        self.assertIn("最小授权信息", repair_prompt)
         self.assertEqual(result.record.retry_count, 1)
         self.assertEqual(len(result.record.attempts), 2)
         self.assertEqual(
@@ -115,6 +127,7 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result.record.attempts[1].stage, "schema_repair")
         self.assertTrue(result.record.attempts[1].success)
         self.assertFalse(result.record.attempts[1].thinking_enabled)
+        self.assertEqual(result.record.final_complexity_level, "l2_minimal_repair")
 
     async def test_exhausted_repair_is_auditable(self) -> None:
         model = StubStructuredModel(

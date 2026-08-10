@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import unittest
 
+from wolfscope.agents.hybrid import AgentGameProvider
 from wolfscope.agents.runtime import PlayerRuntime
 from wolfscope.agents.prompt import render_decision_prompt
 from wolfscope.agents.schemas import (
     AgentDecisionInput,
     DecisionTask,
+    ComplexityLevel,
     PublicGameSummary,
     SpeechDecision,
     SpeechTaskObservation,
@@ -41,6 +43,31 @@ def view_for(seat: int):
 
 
 class StrategyBuilderTests(unittest.TestCase):
+    def test_complexity_policy_uses_role_default_and_villager_escalation(self) -> None:
+        self.assertEqual(
+            AgentGameProvider._complexity_for(
+                role=RoleType.WEREWOLF,
+                task="speech",
+                situation_tags=(),
+            )[0],
+            ComplexityLevel.FULL,
+        )
+        self.assertEqual(
+            AgentGameProvider._complexity_for(
+                role=RoleType.VILLAGER,
+                task="speech",
+                situation_tags=(),
+            )[0],
+            ComplexityLevel.COMPACT,
+        )
+        self.assertEqual(
+            AgentGameProvider._complexity_for(
+                role=RoleType.VILLAGER,
+                task="speech",
+                situation_tags=(SituationTag.SELF_RECEIVED_WOLF_CHECK,),
+            )[0],
+            ComplexityLevel.FULL,
+        )
     def test_active_wolf_plan_requires_focus_target(self) -> None:
         from wolfscope.cognition.strategy import WolfAssignment, WolfPosture, WolfTeamPlan
 

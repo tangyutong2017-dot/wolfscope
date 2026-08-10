@@ -68,6 +68,13 @@ class VoteContextMode(StrEnum):
     COMPACT = "compact"
 
 
+class ComplexityLevel(StrEnum):
+    FULL = "l0_full"
+    COMPACT = "l1_compact"
+    MINIMAL_REPAIR = "l2_minimal_repair"
+    DETERMINISTIC = "l3_deterministic"
+
+
 class PublicGameSummary(StrictModel):
     alive_seats: tuple[Seat, ...]
     dead_seats: tuple[Seat, ...]
@@ -368,6 +375,8 @@ class AgentDecisionInput(StrictModel):
     decision_brief: DecisionBrief | None = None
     strategy_brief: StrategyBrief | None = None
     vote_context_mode: VoteContextMode = VoteContextMode.FULL
+    complexity_level: ComplexityLevel = ComplexityLevel.FULL
+    complexity_reason: str = "default_full"
 
     @model_validator(mode="after")
     def actor_matches_viewer(self) -> AgentDecisionInput:
@@ -455,6 +464,23 @@ class SpeechDecision(StrictModel):
             raise ValueError("speak decision requires non-empty speech")
         if self.action == "explode" and self.speech is not None:
             raise ValueError("explode decision cannot contain speech")
+        return self
+
+
+class SpeechRepairDecision(StrictModel):
+    """Small L2 transport reconstructed locally into SpeechDecision."""
+
+    action: Literal["speak", "explode"]
+    speech: str | None = None
+    intent: str = Field(min_length=1)
+    strategy_ids: tuple[str, ...] = ()
+
+    @model_validator(mode="after")
+    def action_payload_is_coherent(self):
+        if self.action == "speak" and (self.speech is None or not self.speech.strip()):
+            raise ValueError("speak repair requires non-empty speech")
+        if self.action == "explode" and self.speech is not None:
+            raise ValueError("explode repair cannot contain speech")
         return self
 
 

@@ -90,6 +90,7 @@ python -m unittest discover -s tests
 - [M2-5 行动 Agent 化](docs/M2_5_ACTION_AGENTIZATION.md)
 - [M2-6 完整 Agent 终局验收](docs/M2_6_FULL_GAME_ACCEPTANCE.md)
 - [M2-7 发言长度策略](docs/M2_7_SPEECH_POLICY.md)
+- [M2-8 决策复杂度与智能降级](docs/M2_8_COMPLEXITY_POLICY.md)
 - [架构决策记录](docs/decisions/)
 
 ## 当前阶段

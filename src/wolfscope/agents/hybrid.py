@@ -9,6 +9,7 @@ from wolfscope.agents.schemas import (
     AgentDecisionInput,
     BadgeTransferDecision,
     BadgeTransferTaskObservation,
+    ComplexityLevel,
     DeathLastWordsTaskObservation,
     DecisionTask,
     HunterTargetDecision,
@@ -46,6 +47,7 @@ from wolfscope.player_view import PlayerViewBuilder
 from wolfscope.cognition.context import EvidenceContextBuilder
 from wolfscope.cognition.brief import DecisionBriefBuilder
 from wolfscope.cognition.strategy import (
+    SituationTag,
     StrategyBuilder,
     StrategySituationBuilder,
     WolfTeamPlan,
@@ -183,6 +185,11 @@ class AgentGameProvider:
             situation_tags=situation_tags,
             wolf_team_plan=self.wolf_team_plan,
         )
+        complexity_level, complexity_reason = self._complexity_for(
+            role=view.own_role,
+            task=observation.task,
+            situation_tags=situation_tags,
+        )
         return AgentDecisionInput(
             player_view=view,
             public_summary=PublicGameSummary.from_view(view),
@@ -195,7 +202,24 @@ class AgentGameProvider:
                 if isinstance(observation, VoteTaskObservation)
                 else VoteContextMode.FULL
             ),
+            complexity_level=complexity_level,
+            complexity_reason=complexity_reason,
         )
+
+    @staticmethod
+    def _complexity_for(*, role, task, situation_tags):
+        if role.value != "villager":
+            return ComplexityLevel.FULL, "private_role_default"
+        critical_tags = {
+            SituationTag.SELF_UNDER_PRESSURE,
+            SituationTag.SELF_RECEIVED_WOLF_CHECK,
+            SituationTag.ENDGAME_PRESSURE,
+        }
+        if set(situation_tags) & critical_tags:
+            return ComplexityLevel.FULL, "villager_critical_situation"
+        if task in {"pk_speech", "last_words", "death_last_words"}:
+            return ComplexityLevel.FULL, "villager_terminal_or_pk"
+        return ComplexityLevel.COMPACT, "villager_default"
 
     @staticmethod
     def _bounded_speech(runtime, task: DecisionTask, speech: str) -> str:
