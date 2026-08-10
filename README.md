@@ -76,7 +76,33 @@ wolfscope-m1 good-win-seed-42 --output-dir replays --overwrite
 python -m unittest discover -s tests
 ```
 
-当前包含 171 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent、夜间角色 Agent、死亡技能/遗言 Agent、完整多日 Agent 终局和 Replay 往返，以及 EvidenceLedger、规则推导、公共 Claim、失败回归样本、Evidence/Strategy 引用审计、分阶段发言长度控制、ID 隔离和失败降级。
+当前包含 192 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent、夜间角色 Agent、死亡技能/遗言 Agent、完整多日 Agent 终局和 Replay 往返，以及 EvidenceLedger、规则推导、公共 Claim、失败回归样本、Evidence/Strategy 引用审计、分阶段发言长度控制、ID 隔离、失败降级和自动评测聚合。
+
+## 运行 M3 自动评测
+
+真实评测会调用 DeepSeek API。配置 `.env.local` 后，可对固定 seeds 串行运行完整 Agent 对局：
+
+```bash
+set -a
+source .env.local
+set +a
+wolfscope-eval --seeds 1,2,3 --output-dir artifacts/evaluation/flash-baseline-v1
+```
+
+每局结束都会增量保存，意外中断后可使用同一配置恢复：
+
+```bash
+wolfscope-eval --seeds 1,2,3 \
+  --output-dir artifacts/evaluation/flash-baseline-v1 \
+  --resume
+```
+
+评测目录包含逐局 GOD Replay、完整调用诊断、失败记录、机器可读的 `summary.json` 和作品集可直接引用的中文 `report.md`。无需调用 API 即可重新聚合：
+
+```bash
+wolfscope-eval --aggregate-only \
+  --output-dir artifacts/evaluation/flash-baseline-v1
+```
 
 ## 项目文档
 
@@ -91,6 +117,7 @@ python -m unittest discover -s tests
 - [M2-6 完整 Agent 终局验收](docs/M2_6_FULL_GAME_ACCEPTANCE.md)
 - [M2-7 发言长度策略](docs/M2_7_SPEECH_POLICY.md)
 - [M2-8 决策复杂度与智能降级](docs/M2_8_COMPLEXITY_POLICY.md)
+- [M3-1 自动对局评测](docs/M3_1_GAME_EVALUATION.md)
 - [架构决策记录](docs/decisions/)
 
 ## 当前阶段
