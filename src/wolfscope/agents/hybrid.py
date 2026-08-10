@@ -45,7 +45,11 @@ from wolfscope.game.night import WitchAction, WitchActionType
 from wolfscope.player_view import PlayerViewBuilder
 from wolfscope.cognition.context import EvidenceContextBuilder
 from wolfscope.cognition.brief import DecisionBriefBuilder
-from wolfscope.cognition.strategy import StrategyBuilder, WolfTeamPlan
+from wolfscope.cognition.strategy import (
+    StrategyBuilder,
+    StrategySituationBuilder,
+    WolfTeamPlan,
+)
 from wolfscope.agents.speech_policy import SpeechPolicy
 
 if TYPE_CHECKING:
@@ -66,6 +70,7 @@ class AgentGameProvider:
         decision_brief_builder: DecisionBriefBuilder | None = None,
         vote_context_mode: VoteContextMode = VoteContextMode.FULL,
         strategy_builder: StrategyBuilder | None = None,
+        strategy_situation_builder: StrategySituationBuilder | None = None,
     ) -> None:
         self.view_builder = view_builder
         self.runtimes = runtimes
@@ -76,6 +81,9 @@ class AgentGameProvider:
         self.decision_brief_builder = decision_brief_builder or DecisionBriefBuilder()
         self.vote_context_mode = vote_context_mode
         self.strategy_builder = strategy_builder or StrategyBuilder()
+        self.strategy_situation_builder = (
+            strategy_situation_builder or StrategySituationBuilder()
+        )
         self.wolf_team_plan: WolfTeamPlan | None = None
         self.wolf_team_plan_history: list[WolfTeamPlan] = []
 
@@ -144,24 +152,35 @@ class AgentGameProvider:
             evidence_context = self.evidence_context_builder.build(
                 ledger,
             )
+            strategy_situation = self.decision_brief_builder.build(
+                ledger,
+                day=view.day,
+                candidates=tuple(
+                    player.seat
+                    for player in view.players
+                    if player.alive and player.seat != seat
+                ),
+            )
             decision_brief = (
-                self.decision_brief_builder.build(
-                    ledger,
-                    day=view.day,
-                    candidates=observation.candidates,
-                )
-                if isinstance(observation, VoteTaskObservation)
-                else None
+                strategy_situation if isinstance(observation, VoteTaskObservation) else None
             )
         else:
             evidence_context = None
             decision_brief = None
+            strategy_situation = None
+        situation_tags = self.strategy_situation_builder.build(
+            view=view,
+            observation=observation,
+            brief=strategy_situation,
+            wolf_team_plan=self.wolf_team_plan,
+        )
         strategy_brief = self.strategy_builder.build(
             owner=seat,
             role=view.own_role,
             day=view.day,
             task=observation.task,
-            situation=decision_brief,
+            situation=strategy_situation,
+            situation_tags=situation_tags,
             wolf_team_plan=self.wolf_team_plan,
         )
         return AgentDecisionInput(

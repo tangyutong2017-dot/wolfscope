@@ -11,7 +11,14 @@ from wolfscope.agents.schemas import (
     SpeechDecision,
     SpeechTaskObservation,
 )
-from wolfscope.cognition.strategy import StrategyBuilder
+from wolfscope.cognition.brief import CheckBrief, DecisionBrief, RoleClaimBrief
+from wolfscope.cognition.claims import ClaimAlignment, ClaimPolarity
+from wolfscope.cognition.strategy import (
+    SituationTag,
+    StrategyBrief,
+    StrategyBuilder,
+    StrategySituationBuilder,
+)
 from wolfscope.game import GameState, PlayerState
 from wolfscope.game.config import STANDARD_9_RULES
 from wolfscope.game.events import EventLog
@@ -72,6 +79,66 @@ class StrategyBuilderTests(unittest.TestCase):
             warning_roles,
             {RoleType.WEREWOLF, RoleType.SEER, RoleType.WITCH},
         )
+
+    def test_situation_tags_are_deterministic_public_facts(self) -> None:
+        view = view_for(4)
+        brief = DecisionBrief(
+            owner=4,
+            day=1,
+            ledger_revision=2,
+            belief_revision=2,
+            candidates=(),
+            role_claims=(
+                RoleClaimBrief(
+                    speaker=7,
+                    subject=7,
+                    role=RoleType.SEER,
+                    polarity=ClaimPolarity.ASSERT,
+                    evidence_id="p4-e1",
+                ),
+            ),
+            checks=(
+                CheckBrief(
+                    speaker=7,
+                    target=4,
+                    night=1,
+                    result=ClaimAlignment.WEREWOLF,
+                    evidence_id="p4-e2",
+                ),
+            ),
+        )
+
+        tags = StrategySituationBuilder().build(
+            view=view,
+            observation=SpeechTaskObservation(
+                actor=4,
+                speaking_order=tuple(range(1, 10)),
+                previous_speeches=(),
+                can_explode=False,
+            ),
+            brief=brief,
+            wolf_team_plan=None,
+        )
+
+        self.assertIn(SituationTag.EARLY_GAME, tags)
+        self.assertIn(SituationTag.SINGLE_SEER_CLAIM, tags)
+        self.assertIn(SituationTag.CLAIMED_WOLF_EXISTS, tags)
+        self.assertIn(SituationTag.SELF_RECEIVED_WOLF_CHECK, tags)
+        self.assertIn(SituationTag.SELF_UNDER_PRESSURE, tags)
+
+    def test_good_role_rejects_wolf_private_situation_tag(self) -> None:
+        with self.assertRaisesRegex(ValueError, "wolf-private"):
+            StrategyBrief(
+                owner=4,
+                day=1,
+                task="speech",
+                role=RoleType.VILLAGER,
+                role_goal="找狼",
+                priorities=(),
+                methods=(),
+                warnings=(),
+                situation_tags=(SituationTag.TEAMMATE_UNDER_PRESSURE,),
+            )
 
 
 class StrategyRuntimeTests(unittest.IsolatedAsyncioTestCase):

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
-from wolfscope.contracts import Seat, StrictModel
+from wolfscope.contracts import PlayerView, Seat, StrictModel
 from wolfscope.game.types import RoleType
 
 from .brief import DecisionBrief
@@ -39,6 +39,91 @@ class WolfPosture(StrEnum):
 class WolfAssignment(StrictModel):
     seat: Seat
     posture: WolfPosture
+
+
+class SituationTag(StrEnum):
+    """Small deterministic facts used to select strategies, never conclusions."""
+
+    SINGLE_SEER_CLAIM = "single_seer_claim"
+    MULTIPLE_SEER_CLAIMS = "multiple_seer_claims"
+    SELF_UNDER_PRESSURE = "self_under_pressure"
+    CLAIMED_WOLF_EXISTS = "claimed_wolf_exists"
+    ROLE_CLAIM_CONFLICT = "role_claim_conflict"
+    VOTE_BEHAVIOR_CONFLICT = "vote_behavior_conflict"
+    EARLY_GAME = "early_game"
+    MID_GAME = "mid_game"
+    ENDGAME_PRESSURE = "endgame_pressure"
+    SELF_RECEIVED_WOLF_CHECK = "self_received_wolf_check"
+    SELF_RECEIVED_GOOD_CHECK = "self_received_good_check"
+    TEAMMATE_UNDER_PRESSURE = "teammate_under_pressure"
+    CLAIMANT_IS_TEAMMATE = "claimant_is_teammate"
+
+
+WOLF_PRIVATE_SITUATION_TAGS = {
+    SituationTag.TEAMMATE_UNDER_PRESSURE,
+    SituationTag.CLAIMANT_IS_TEAMMATE,
+}
+
+
+class StrategySituationBuilder:
+    """Derive compact observable tags without asking the model to judge truth."""
+
+    def build(
+        self,
+        *,
+        view: PlayerView,
+        observation: Any,
+        brief: DecisionBrief | None,
+        wolf_team_plan: WolfTeamPlan | None,
+    ) -> tuple[SituationTag, ...]:
+        tags: set[SituationTag] = set()
+        if view.day <= 1:
+            tags.add(SituationTag.EARLY_GAME)
+        elif view.day <= 3:
+            tags.add(SituationTag.MID_GAME)
+        alive = {player.seat for player in view.players if player.alive}
+        if len(alive) <= 5:
+            tags.add(SituationTag.ENDGAME_PRESSURE)
+        if brief is not None:
+            seer_claimants = {
+                claim.speaker
+                for claim in brief.role_claims
+                if claim.subject == claim.speaker
+                and claim.role is RoleType.SEER
+                and claim.polarity.value == "assert"
+            }
+            if len(seer_claimants) == 1:
+                tags.add(SituationTag.SINGLE_SEER_CLAIM)
+            elif len(seer_claimants) > 1:
+                tags.add(SituationTag.MULTIPLE_SEER_CLAIMS)
+            wolf_checks = {
+                check.target for check in brief.checks if check.result.value == "werewolf"
+            }
+            good_checks = {
+                check.target for check in brief.checks if check.result.value == "good"
+            }
+            if wolf_checks:
+                tags.add(SituationTag.CLAIMED_WOLF_EXISTS)
+            if view.viewer_seat in wolf_checks:
+                tags.add(SituationTag.SELF_RECEIVED_WOLF_CHECK)
+                tags.add(SituationTag.SELF_UNDER_PRESSURE)
+            if view.viewer_seat in good_checks:
+                tags.add(SituationTag.SELF_RECEIVED_GOOD_CHECK)
+            conflict_kinds = {conflict.kind for conflict in brief.conflicts}
+            if conflict_kinds & {"unique_role_counterclaim", "self_role_claim_conflict"}:
+                tags.add(SituationTag.ROLE_CLAIM_CONFLICT)
+            if "vote_behavior_conflict" in conflict_kinds:
+                tags.add(SituationTag.VOTE_BEHAVIOR_CONFLICT)
+        pressure_seats = set(getattr(observation, "tied_seats", ()))
+        if view.viewer_seat in pressure_seats:
+            tags.add(SituationTag.SELF_UNDER_PRESSURE)
+        if view.own_role is RoleType.WEREWOLF:
+            teammates = set(view.own_role_state.teammate_seats)
+            if teammates & pressure_seats:
+                tags.add(SituationTag.TEAMMATE_UNDER_PRESSURE)
+            if wolf_team_plan is not None and wolf_team_plan.primary_claimant in teammates:
+                tags.add(SituationTag.CLAIMANT_IS_TEAMMATE)
+        return tuple(tag for tag in SituationTag if tag in tags)
 
 
 class WolfTeamPlan(StrictModel):
@@ -112,6 +197,7 @@ class StrategyBrief(StrictModel):
     priorities: tuple[StrategyPriority, ...] = Field(max_length=3)
     methods: tuple[StrategyMethod, ...] = Field(max_length=5)
     warnings: tuple[StrategyWarning, ...] = Field(max_length=3)
+    situation_tags: tuple[SituationTag, ...] = ()
     wolf_team_plan: WolfTeamPlan | None = None
 
     @model_validator(mode="after")
@@ -130,6 +216,8 @@ class StrategyBrief(StrictModel):
             pass
         elif self.wolf_team_plan is not None:
             raise ValueError("only werewolves can receive a wolf team plan")
+        if self.role is not RoleType.WEREWOLF and set(self.situation_tags) & WOLF_PRIVATE_SITUATION_TAGS:
+            raise ValueError("only werewolves can receive wolf-private situation tags")
         return self
 
     @property
@@ -207,6 +295,7 @@ class StrategyBuilder:
             "badge_transfer",
         ],
         situation: DecisionBrief | None = None,
+        situation_tags: tuple[SituationTag, ...] = (),
         wolf_team_plan: WolfTeamPlan | None = None,
     ) -> StrategyBrief:
         priority_id, priority_description = {
@@ -254,6 +343,7 @@ class StrategyBuilder:
             priorities=(task_priority, role_priority),
             methods=tuple(methods),
             warnings=tuple(warnings[:3]),
+            situation_tags=situation_tags,
             wolf_team_plan=(
                 wolf_team_plan if role is RoleType.WEREWOLF else None
             ),
