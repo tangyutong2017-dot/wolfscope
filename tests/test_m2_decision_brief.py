@@ -314,6 +314,7 @@ class DecisionBriefTraceTests(unittest.IsolatedAsyncioTestCase):
             decision_brief=brief,
         )
         full_prompt = render_decision_prompt(base, DecisionTask.VOTE)
+        self.assertIn("不能仅以‘信息不足’为理由弃票", full_prompt)
         balanced_input = base.model_copy(
             update={"vote_context_mode": VoteContextMode.BALANCED},
         )

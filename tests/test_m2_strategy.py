@@ -273,7 +273,8 @@ class StrategyBuilderTests(unittest.TestCase):
             (RoleType.SEER, "seer_target", "check_influential_unknown"),
             (RoleType.SEER, "badge_transfer", "transfer_badge_by_own_checks"),
             (RoleType.WITCH, "witch_action", "evaluate_medicine_value"),
-            (RoleType.HUNTER, "hunter_target", "shoot_only_with_auditable_basis"),
+            (RoleType.WITCH, "sheriff_campaign", "campaign_without_witch_claim"),
+            (RoleType.HUNTER, "hunter_target", "use_shot_with_best_available_basis"),
             (RoleType.HUNTER, "death_last_words", "separate_words_from_shot"),
         )
         for role, task, expected_id in cases:

@@ -63,8 +63,8 @@ def render_decision_prompt(
     task_text = {
         DecisionTask.SPEECH: "完成当前白天发言；仅在允许且确有必要时选择自爆。",
         DecisionTask.VOTE: (
-            "从 candidates 中选择放逐目标。有合理怀疑对象时应正常投票；"
-            "只有信息严重不足时才提交 target=null 弃票。"
+            "从 candidates 中选择放逐目标。听完本轮发言后，即使证据不充分也应比较相对怀疑并正常投票；"
+            "不能仅以‘信息不足’为理由弃票。只有候选人完全无法区分且不存在任何相对依据时才提交 target=null。"
         ),
         DecisionTask.SHERIFF_SIGNUP: "决定是否参加第一天警长竞选。",
         DecisionTask.SHERIFF_CAMPAIGN: "完成警长竞选发言，说明竞选立场和组织信息的方法。",
@@ -77,7 +77,7 @@ def render_decision_prompt(
         DecisionTask.PK_SPEECH: "完成平票PK发言，回应当前焦点并给出可核对信息。",
         DecisionTask.LAST_WORDS: "你即将因本轮放逐出局；完成最后遗言，不得描述自己未来仍会参与后续轮次。",
         DecisionTask.DEATH_LAST_WORDS: "你已在当前死亡批次中死亡；这是首夜死讯公布后、第一天白天发言前，不能等待或引用尚未发生的白天发言和票型。完成唯一一次死亡遗言，不得假设自己未来再次出局或继续行动。若你是可开枪猎人，本任务只发表遗言，不得承诺开枪、不开枪或具体目标；遗言结束后 Engine 会立即用独立任务询问枪权。",
-        DecisionTask.HUNTER_TARGET: "你已经死亡且正在结算唯一一次猎人枪权；当前不能等待任何未来发言或票型，必须根据已有信息决定立即开枪或永久不开枪，如开枪只能选择 eligible_targets。",
+        DecisionTask.HUNTER_TARGET: "你已经死亡且正在结算唯一一次猎人枪权；当前不能等待任何未来发言或票型，必须根据已有信息决定立即开枪或永久不开枪。残局或遗言已有明确最高怀疑目标时应优先开枪，不能笼统以误伤风险回避决定；如开枪只能选择 eligible_targets。",
         DecisionTask.BADGE_TRANSFER: "你已经死亡且正在结算警徽；立即移交给 eligible_targets 中一人，或 target=null 永久撕毁。",
     }[task]
     payload = _model_payload(decision_input)

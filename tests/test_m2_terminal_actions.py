@@ -126,6 +126,7 @@ class TerminalActionAgentTests(unittest.IsolatedAsyncioTestCase):
             DecisionTask.HUNTER_TARGET,
         )
         self.assertIn("枪权以本任务为唯一正式决定", hunter_prompt)
+        self.assertIn("不能笼统以误伤风险回避决定", hunter_prompt)
         badge_input = runtimes.get(9).gateway.inputs[2]
         self.assertEqual(badge_input.observation.hunter_target, 4)
         self.assertFalse(

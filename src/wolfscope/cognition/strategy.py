@@ -284,7 +284,7 @@ class StrategyBuilder:
             ("explain_check_plan", "公布查验时说明已知结果和后续验人方向。"),
         ),
         RoleType.WITCH: (
-            ("hide_or_reveal_witch", "权衡生存价值和纠错收益后决定是否公开女巫身份。"),
+            ("hide_or_reveal_witch", "默认隐藏女巫底牌；仅在本人受压、需要纠正假女巫或公开真实药物信息能直接自救时才考虑跳明。"),
         ),
         RoleType.HUNTER: (
             ("hide_or_reveal_hunter", "权衡被推风险与身份威慑后决定是否跳猎人。"),
@@ -322,7 +322,7 @@ class StrategyBuilder:
         RoleType.HUNTER: (
             (SituationTag.SELF_UNDER_PRESSURE, "reveal_hunter_under_pressure", "被查杀、进PK或面临放逐时，评估公开枪权以降低误推风险。"),
             (SituationTag.VOTE_BEHAVIOR_CONFLICT, "prepare_shot_reasoning", "枪权候选优先参考查验、声明冲突与实际票型，而非单句情绪。"),
-            (SituationTag.ENDGAME_PRESSURE, "preserve_decisive_shot", "残局同时比较开枪收益与误伤风险，枪权并非必须使用。"),
+            (SituationTag.ENDGAME_PRESSURE, "use_decisive_shot", "残局枪权可能直接改变胜负；除非所有合法目标完全不可区分，否则应向已有依据下最高怀疑目标开枪。"),
         ),
     }
 
@@ -355,6 +355,10 @@ class StrategyBuilder:
             "evaluate_medicine_value",
             "分别比较救人、毒人和留药对当前轮次的确定收益；不因持有药物就机械使用。",
         ),
+        (RoleType.WITCH, "sheriff_campaign"): (
+            "campaign_without_witch_claim",
+            "没有被查杀、对跳女巫或面临立即放逐时，不得在竞选发言中主动公开女巫底牌和药物状态；以普通好人视角说明组织方法。",
+        ),
         (RoleType.WITCH, "last_words"): (
             "leave_truthful_medicine_record",
             "若选择公开女巫身份，只陈述真实刀口与用药记录，并区分事实和个人判断。",
@@ -364,8 +368,8 @@ class StrategyBuilder:
             "若选择公开女巫身份，只陈述真实刀口与用药记录，并区分事实和个人判断。",
         ),
         (RoleType.HUNTER, "hunter_target"): (
-            "shoot_only_with_auditable_basis",
-            "比较已有查验、声明冲突和实际票型；误伤风险更高时明确选择不开枪。",
+            "use_shot_with_best_available_basis",
+            "比较已有查验、声明冲突和实际票型；遗言已有合法最高怀疑目标时保持行动一致，残局除非目标完全不可区分否则优先开枪。",
         ),
         (RoleType.HUNTER, "last_words"): (
             "separate_words_from_shot",
@@ -407,7 +411,7 @@ class StrategyBuilder:
     ) -> StrategyBrief:
         priority_id, priority_description = {
             "speech": ("state_useful_position", "给出有信息价值且不泄露私密来源的公开立场。"),
-            "vote": ("make_auditable_vote", "在合法候选人中形成有依据的票向，信息足够时避免消极弃票。"),
+            "vote": ("make_auditable_vote", "完成发言后比较相对怀疑并形成明确票向；不能只因信息不充分消极弃票，只有候选完全不可区分时才可弃票。"),
             "sheriff_signup": ("assess_sheriff_value", "结合身份目标判断上警收益，不机械固定上警或警下。"),
             "sheriff_campaign": ("present_sheriff_case", "清楚说明竞选立场和后续组织信息的方法。"),
             "sheriff_withdrawal": ("reassess_candidacy", "听完全部竞选发言后重新评估继续竞选是否有利。"),
@@ -419,7 +423,7 @@ class StrategyBuilder:
             "pk_speech": ("resolve_pk_pressure", "回应平票焦点并指出双方可核对的关键差异。"),
             "last_words": ("leave_auditable_legacy", "用遗言留下可核对的身份、信息和后续建议。"),
             "death_last_words": ("leave_auditable_legacy", "用遗言留下可核对的身份、信息和后续建议。"),
-            "hunter_target": ("use_hunter_shot", "只在带人收益高于误伤风险时开枪，否则可以不开枪。"),
+            "hunter_target": ("use_hunter_shot", "依据当前全部公开信息执行唯一枪权；残局或已有明确最高怀疑目标时优先开枪。"),
             "badge_transfer": ("preserve_information_leadership", "将警徽交给更可信且能组织信息的存活玩家，必要时撕毁。"),
         }[task]
         task_priority = StrategyPriority(
