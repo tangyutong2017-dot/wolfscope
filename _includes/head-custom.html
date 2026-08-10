@@ -1,0 +1,41 @@
+<!--
+  GitHub 站内 markdown 自带 mermaid 渲染,Jekyll 没有 —— 不加这段,
+  README 里那两张图在 Pages 上会是代码块。
+  cayman 主题的 default 布局留了 head-custom 这个插入点。
+-->
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+  // Kramdown 把 ```mermaid 编译成 <pre><code class="language-mermaid">,
+  // 换成 mermaid 认的 <div class="mermaid">
+  for (const code of document.querySelectorAll("code.language-mermaid")) {
+    const holder = document.createElement("div");
+    holder.className = "mermaid";
+    holder.textContent = code.textContent;
+    (code.closest("pre") ?? code).replaceWith(holder);
+  }
+
+  mermaid.initialize({ startOnLoad: true, theme: "neutral" });
+</script>
+
+<style>
+  /* 图较宽,窄屏下让它自己横向滚动,别把整页撑破 */
+  .mermaid { overflow-x: auto; }
+
+  /* mermaid 生成的 svg 带 height:100%,在打印布局里会塌成 0 高度,
+     导致后面的内容压到图上面。强制 auto。 */
+  .mermaid svg { height: auto !important; max-width: 100% !important; }
+
+  @media print {
+    /* 打印时不要滚动容器,否则超出部分直接被裁掉 */
+    .mermaid { overflow: visible; }
+    .mermaid, .mermaid svg, img, table { break-inside: avoid; page-break-inside: avoid; }
+    img { max-width: 100% !important; }
+  }
+
+  /* 图片加个淡边框,免得和页面背景糊在一起 */
+  img[src*="graph-"] {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+  }
+</style>

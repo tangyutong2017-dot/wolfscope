@@ -1,0 +1,14 @@
+# 根目录没有 index 文件,Jekyll 会自动拿 README.md 当首页。
+theme: jekyll-theme-cayman
+
+title: WolfScope
+description: 让九个 AI 在不完全信息下互相博弈、说谎与推理
+
+# 源码不参与站点构建
+exclude:
+  - src/
+  - tests/
+  - scripts/
+  - datasets/
+  - replays/
+  - pyproject.toml
