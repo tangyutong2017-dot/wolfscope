@@ -20,11 +20,19 @@ from wolfscope.agents.schemas import (
     WolfTargetTaskObservation,
 )
 from wolfscope.cognition.strategy import (
+    SituationTag,
     StrategyBuilder,
     WolfAssignment,
     WolfPosture,
     WolfTeamPlan,
 )
+from wolfscope.cognition.brief import (
+    CandidateBrief,
+    CheckBrief,
+    DecisionBrief,
+    RoleClaimBrief,
+)
+from wolfscope.cognition.claims import ClaimAlignment, ClaimPolarity
 from wolfscope.contracts import Visibility
 from wolfscope.game import DeathCause, GameState, PlayerState
 from wolfscope.game.config import STANDARD_9_RULES
@@ -242,6 +250,83 @@ class DecisionSchemaTests(unittest.IsolatedAsyncioTestCase):
 
 
 class FakeGatewayAndRuntimeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_good_cannot_abstain_or_vote_day_one_single_seer(self) -> None:
+        state = game_state()
+        view = PlayerViewBuilder(state, EventLog()).build(4)
+        candidates = tuple(seat for seat in range(1, 10) if seat != 4)
+        brief = DecisionBrief(
+            owner=4,
+            day=1,
+            ledger_revision=2,
+            belief_revision=2,
+            candidates=tuple(
+                CandidateBrief(seat=seat, wolf_probability=0.375, trust_score=0.0)
+                for seat in candidates
+            ),
+            role_claims=(
+                RoleClaimBrief(
+                    speaker=5,
+                    subject=5,
+                    role="seer",
+                    polarity=ClaimPolarity.ASSERT,
+                    evidence_id="p4-e1",
+                ),
+            ),
+            checks=(
+                CheckBrief(
+                    speaker=5,
+                    target=1,
+                    night=1,
+                    result=ClaimAlignment.GOOD,
+                    evidence_id="p4-e2",
+                ),
+            ),
+        )
+        strategy = StrategyBuilder().build(
+            owner=4,
+            role=state.get_player(4).role,
+            day=1,
+            task="vote",
+            situation_tags=(SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST,),
+        )
+        decision_input = AgentDecisionInput(
+            player_view=view,
+            public_summary=PublicGameSummary.from_view(view),
+            observation=VoteTaskObservation(
+                voter=4,
+                vote_round=ExileVoteRound.FIRST,
+                candidates=candidates,
+                speeches=(),
+            ),
+            decision_brief=brief,
+            strategy_brief=strategy,
+        )
+        for submitted in (None, 5):
+            with self.subTest(submitted=submitted):
+                runtime = PlayerRuntime(
+                    4,
+                    model_config_for(ModelProfile.TEST),
+                    FakeModelGateway([
+                        VoteDecision(
+                            target=submitted,
+                            confidence=0.4,
+                            reason="信息不足",
+                        ),
+                    ]),
+                )
+
+                decision = await runtime.decide(
+                    task=DecisionTask.VOTE,
+                    decision_input=decision_input,
+                    output_schema=VoteDecision,
+                )
+
+                self.assertEqual(decision.target, 2)
+                self.assertEqual(
+                    runtime.call_records[0].error_type,
+                    "provisional_single_seer_vote_constraint",
+                )
+
     async def test_repeated_fake_check_is_rejected_and_advanced_deterministically(self) -> None:
         state = game_state()
         state.day = 2

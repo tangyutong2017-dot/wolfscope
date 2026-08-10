@@ -7,7 +7,11 @@ from typing import Callable, TypeVar
 
 from pydantic import BaseModel
 
-from wolfscope.agents.fallback import safe_fallback_decision, seer_badge_flow_target
+from wolfscope.agents.fallback import (
+    safe_fallback_decision,
+    seer_badge_flow_target,
+)
+from wolfscope.cognition.strategy import SituationTag
 from wolfscope.models.config import DeepSeekModelConfig
 from wolfscope.models.gateway import (
     ModelCallRecord,
@@ -353,6 +357,48 @@ class PlayerRuntime:
                     decision_input=decision_input,
                     output_schema=output_schema,
                 )
+            strategy = decision_input.strategy_brief
+            if (
+                isinstance(decision, VoteDecision)
+                and view.own_role.value != "werewolf"
+                and strategy is not None
+                and SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST
+                in strategy.situation_tags
+            ):
+                brief = decision_input.decision_brief
+                seer_claimants = {
+                    claim.subject
+                    for claim in brief.role_claims
+                    if claim.speaker == claim.subject
+                    and claim.role.value == "seer"
+                    and claim.polarity.value == "assert"
+                } if brief is not None else set()
+                sole_seer = (
+                    next(iter(seer_claimants))
+                    if len(seer_claimants) == 1
+                    else None
+                )
+                violates_working_consensus = (
+                    decision.target is None or decision.target == sole_seer
+                )
+                if violates_working_consensus:
+                    self.call_records.append(
+                        record.model_copy(
+                            update={
+                                "success": False,
+                                "fallback_used": True,
+                                "error_type": "provisional_single_seer_vote_constraint",
+                                "invalid_target": decision.target,
+                                "final_complexity_level": ComplexityLevel.DETERMINISTIC.value,
+                            },
+                        ),
+                    )
+                    self.last_view_revision = view.view_revision
+                    return safe_fallback_decision(
+                        task=task,
+                        decision_input=decision_input,
+                        output_schema=output_schema,
+                    )
             if isinstance(decision, VoteDecision) and view.own_role.value == "seer":
                 confirmed_wolves = {
                     event.target

@@ -55,6 +55,67 @@ def seer_badge_flow_target(decision_input: AgentDecisionInput) -> int | None:
     )
 
 
+def provisional_single_seer_vote_target(
+    decision_input: AgentDecisionInput,
+) -> int | None:
+    """Choose a deterministic day-one vote without attacking the working seer."""
+
+    observation = decision_input.observation
+    legal = set(getattr(observation, "candidates", ()))
+    brief = decision_input.decision_brief
+    if not legal or brief is None:
+        return None
+    claimants = {
+        claim.subject
+        for claim in brief.role_claims
+        if claim.speaker == claim.subject
+        and claim.role.value == "seer"
+        and claim.polarity.value == "assert"
+    }
+    if len(claimants) != 1:
+        return None
+    claimant = next(iter(claimants))
+    claimed_wolves = [
+        check.target
+        for check in brief.checks
+        if check.speaker == claimant
+        and check.result.value == "werewolf"
+        and check.target in legal
+    ]
+    if claimed_wolves:
+        return claimed_wolves[-1]
+    claimant_vote = next(
+        (
+            intent.target
+            for intent in reversed(brief.latest_vote_intents)
+            if intent.speaker == claimant
+            and intent.intent.value == "vote"
+            and intent.target in legal
+            and intent.target != claimant
+        ),
+        None,
+    )
+    if claimant_vote is not None:
+        return claimant_vote
+    claimed_goods = {
+        check.target
+        for check in brief.checks
+        if check.speaker == claimant and check.result.value == "good"
+    }
+    eligible = [
+        candidate
+        for candidate in brief.candidates
+        if candidate.seat in legal
+        and candidate.seat != claimant
+        and candidate.seat not in claimed_goods
+    ]
+    return (
+        max(eligible, key=lambda item: (item.wolf_probability, -item.seat)).seat
+        if eligible
+        else None
+    )
+
+
 def safe_fallback_decision(
     *,
     task: DecisionTask,
@@ -109,11 +170,19 @@ def safe_fallback_decision(
                 ),
                 None,
             )
+        if (
+            target is None
+            and strategy is not None
+            and SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST
+            in strategy.situation_tags
+            and decision_input.player_view.own_role.value != "werewolf"
+        ):
+            target = provisional_single_seer_vote_target(decision_input)
         payload = {
             "action": "vote",
             "target": target,
             "reason": (
-                "模型失败后依据本人确认查验或狼队共同目标投票。"
+                "模型失败后依据本人确认查验、单边预言家工作假设或狼队共同目标投票。"
                 if target is not None
                 else "模型失败且没有确定性合法依据，本轮弃票。"
             ),

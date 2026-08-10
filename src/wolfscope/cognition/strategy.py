@@ -308,7 +308,7 @@ class StrategyBuilder:
         RoleType.VILLAGER: (
             (SituationTag.SELF_RECEIVED_WOLF_CHECK, "answer_wolf_check", "被查杀时集中回应查验者的逻辑、时间线和团队关系，避免只重复身份表态。"),
             (SituationTag.MULTIPLE_SEER_CLAIMS, "compare_seer_claimants", "比较双方查验、警徽流、时间线和后续承诺，不因声量直接站边。"),
-            (SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST, "provisionally_follow_single_seer", "第一天只有一名预言家声明者且没有直接矛盾时，给予其较高暂定可信度，优先沿其查验形成工作判断；这仍不是Engine身份认证。"),
+            (SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST, "provisionally_follow_single_seer", "第一天只有一名预言家声明者且没有直接矛盾时，给予其较高暂定可信度，优先沿其查验形成工作判断；好人投票不得消极弃票或投向该预言家，这仍不是Engine身份认证。"),
             (SituationTag.SINGLE_SEER_CLAIM, "verify_single_seer", "第一天之后继续用后续查验、票型和警徽流复核单边预言家，不把声明升级为Engine认证。"),
             (SituationTag.VOTE_BEHAVIOR_CONFLICT, "use_vote_behavior", "区分公开票向与实际票型，要求冲突玩家解释变化。"),
             (SituationTag.ENDGAME_PRESSURE, "converge_endgame_vote", "残局减少无依据分票，明确比较候选人与可验证依据。"),
@@ -324,13 +324,13 @@ class StrategyBuilder:
         RoleType.WITCH: (
             (SituationTag.SELF_UNDER_PRESSURE, "reveal_witch_for_correction", "被强推时评估公开身份与真实药物信息能否纠错和自救。"),
             (SituationTag.MULTIPLE_SEER_CLAIMS, "observe_seer_conflict_privately", "对跳局结合公开信息判断，除非主动跳身份，不用刀口或药物私密信息证明站边。"),
-            (SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST, "provisionally_follow_single_seer", "第一天单边且无直接矛盾的预言家具有较高暂定可信度，优先沿其查验分析，同时保持女巫私密信息隔离。"),
+            (SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST, "provisionally_follow_single_seer", "第一天单边且无直接矛盾的预言家具有较高暂定可信度，优先沿其查验分析；好人投票不得消极弃票或投向该预言家，同时保持女巫私密信息隔离。"),
             (SituationTag.ENDGAME_PRESSURE, "spend_witch_resources", "残局重新评估药物的即时胜负价值，避免为保留而保留。"),
         ),
         RoleType.HUNTER: (
             (SituationTag.SELF_UNDER_PRESSURE, "reveal_hunter_under_pressure", "被查杀、进PK或面临放逐时，评估公开枪权以降低误推风险。"),
             (SituationTag.MULTIPLE_SEER_CLAIMS, "compare_seer_claimants", "对跳时比较双方查验、时间线和警徽流，不提前确认任何一方。"),
-            (SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST, "protect_provisional_single_seer", "第一天不得仅以身份尚未验证为由推、票或枪击唯一且无直接矛盾的预言家；先按高可信工作假设使用其查验。"),
+            (SituationTag.DAY_ONE_SINGLE_SEER_HIGH_TRUST, "protect_provisional_single_seer", "第一天不得仅以身份尚未验证为由推、票或枪击唯一且无直接矛盾的预言家，投票不得消极弃票；先按高可信工作假设使用其查验。"),
             (SituationTag.VOTE_BEHAVIOR_CONFLICT, "prepare_shot_reasoning", "枪权候选优先参考查验、声明冲突与实际票型，而非单句情绪。"),
             (SituationTag.ENDGAME_PRESSURE, "use_decisive_shot", "残局枪权可能直接改变胜负；除非所有合法目标完全不可区分，否则应向已有依据下最高怀疑目标开枪。"),
         ),
