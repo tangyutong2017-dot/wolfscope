@@ -140,6 +140,24 @@ class StrategyBuilderTests(unittest.TestCase):
                 situation_tags=(SituationTag.TEAMMATE_UNDER_PRESSURE,),
             )
 
+    def test_role_selects_one_highest_priority_situation_method(self) -> None:
+        brief = StrategyBuilder().build(
+            owner=4,
+            role=RoleType.VILLAGER,
+            day=1,
+            task="speech",
+            situation_tags=(
+                SituationTag.MULTIPLE_SEER_CLAIMS,
+                SituationTag.SELF_RECEIVED_WOLF_CHECK,
+                SituationTag.VOTE_BEHAVIOR_CONFLICT,
+            ),
+        )
+
+        self.assertIn("answer_wolf_check", brief.strategy_ids)
+        self.assertNotIn("compare_seer_claimants", brief.strategy_ids)
+        self.assertNotIn("use_vote_behavior", brief.strategy_ids)
+        self.assertLessEqual(len(brief.methods), 3)
+
 
 class StrategyRuntimeTests(unittest.IsolatedAsyncioTestCase):
     async def test_runtime_audits_strategy_ids(self) -> None:

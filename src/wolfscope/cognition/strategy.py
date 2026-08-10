@@ -251,23 +251,51 @@ class StrategyBuilder:
     ROLE_METHODS = {
         RoleType.WEREWOLF: (
             ("choose_wolf_posture", "根据局势选择普通伪装、冲锋、倒钩或悍跳，不要机械固定打法。"),
-            ("attack_information_credibility", "从信息来源、时间线和动机质疑对手，不要编造规则。"),
         ),
         RoleType.VILLAGER: (
             ("test_claim_consistency", "追问身份声明、查验逻辑和前后发言是否自洽。"),
-            ("use_vote_behavior", "区分发言票向与实际票型，关注改票和集中票。"),
         ),
         RoleType.SEER: (
             ("explain_check_plan", "公布查验时说明已知结果和后续验人方向。"),
-            ("handle_counterclaim", "出现对跳时比较双方查验、时间线和信息完整度。"),
         ),
         RoleType.WITCH: (
             ("hide_or_reveal_witch", "权衡生存价值和纠错收益后决定是否公开女巫身份。"),
-            ("separate_witch_fact", "只在有意公开身份时使用刀口或救毒私密信息。"),
         ),
         RoleType.HUNTER: (
             ("hide_or_reveal_hunter", "权衡被推风险与身份威慑后决定是否跳猎人。"),
-            ("prepare_shot_reasoning", "枪权判断优先参考查验、冲突和实际票型。"),
+        ),
+    }
+
+    SITUATION_METHODS = {
+        RoleType.WEREWOLF: (
+            (SituationTag.SELF_RECEIVED_WOLF_CHECK, "answer_wolf_check", "自己被公开查杀时，从公开逻辑回应来源与动机，并保持狼队分工一致。"),
+            (SituationTag.TEAMMATE_UNDER_PRESSURE, "manage_teammate_pressure", "队友受压时按既定姿态选择支援、切割或隐藏，不暴露私下关系。"),
+            (SituationTag.MULTIPLE_SEER_CLAIMS, "exploit_seer_conflict", "利用预言家对跳比较公开信息，按狼队分工推动可信叙事。"),
+            (SituationTag.VOTE_BEHAVIOR_CONFLICT, "exploit_vote_conflict", "利用发言与票型冲突施压，但不要把冲突直接说成身份定论。"),
+            (SituationTag.ENDGAME_PRESSURE, "protect_wolf_win_path", "残局优先计算屠神或屠民路径，减少与胜负无关的公开动作。"),
+        ),
+        RoleType.VILLAGER: (
+            (SituationTag.SELF_RECEIVED_WOLF_CHECK, "answer_wolf_check", "被查杀时集中回应查验者的逻辑、时间线和团队关系，避免只重复身份表态。"),
+            (SituationTag.MULTIPLE_SEER_CLAIMS, "compare_seer_claimants", "比较双方查验、警徽流、时间线和后续承诺，不因声量直接站边。"),
+            (SituationTag.SINGLE_SEER_CLAIM, "verify_single_seer", "单预言家局仍需核对查验和行为，不把无人对跳等同于Engine认证。"),
+            (SituationTag.VOTE_BEHAVIOR_CONFLICT, "use_vote_behavior", "区分公开票向与实际票型，要求冲突玩家解释变化。"),
+            (SituationTag.ENDGAME_PRESSURE, "converge_endgame_vote", "残局减少无依据分票，明确比较候选人与可验证依据。"),
+        ),
+        RoleType.SEER: (
+            (SituationTag.SELF_UNDER_PRESSURE, "preserve_seer_information", "受压时优先完整交代真实查验和后续验人方向，避免信息随死亡丢失。"),
+            (SituationTag.MULTIPLE_SEER_CLAIMS, "handle_counterclaim", "出现对跳时比较双方查验、时间线、警徽流和信息完整度。"),
+            (SituationTag.SINGLE_SEER_CLAIM, "build_seer_credibility", "无人对跳时持续给出可验证查验计划，不靠身份声称要求盲信。"),
+            (SituationTag.ENDGAME_PRESSURE, "focus_decisive_check", "残局围绕能改变当轮归票的查验和已知结果组织信息。"),
+        ),
+        RoleType.WITCH: (
+            (SituationTag.SELF_UNDER_PRESSURE, "reveal_witch_for_correction", "被强推时评估公开身份与真实药物信息能否纠错和自救。"),
+            (SituationTag.MULTIPLE_SEER_CLAIMS, "observe_seer_conflict_privately", "对跳局结合公开信息判断，除非主动跳身份，不用刀口或药物私密信息证明站边。"),
+            (SituationTag.ENDGAME_PRESSURE, "spend_witch_resources", "残局重新评估药物的即时胜负价值，避免为保留而保留。"),
+        ),
+        RoleType.HUNTER: (
+            (SituationTag.SELF_UNDER_PRESSURE, "reveal_hunter_under_pressure", "被查杀、进PK或面临放逐时，评估公开枪权以降低误推风险。"),
+            (SituationTag.VOTE_BEHAVIOR_CONFLICT, "prepare_shot_reasoning", "枪权候选优先参考查验、声明冲突与实际票型，而非单句情绪。"),
+            (SituationTag.ENDGAME_PRESSURE, "preserve_decisive_shot", "残局同时比较开枪收益与误伤风险，枪权并非必须使用。"),
         ),
     }
 
@@ -327,6 +355,9 @@ class StrategyBuilder:
             StrategyMethod(method_id=method_id, description=description)
             for method_id, description in self.ROLE_METHODS[role]
         ]
+        situation_method = self._situation_method(role, situation_tags)
+        if situation_method is not None:
+            methods.append(situation_method)
         methods.append(
             StrategyMethod(
                 method_id="separate_claim_from_fact",
@@ -348,6 +379,17 @@ class StrategyBuilder:
                 wolf_team_plan if role is RoleType.WEREWOLF else None
             ),
         )
+
+    def _situation_method(
+        self,
+        role: RoleType,
+        tags: tuple[SituationTag, ...],
+    ) -> StrategyMethod | None:
+        tag_set = set(tags)
+        for tag, method_id, description in self.SITUATION_METHODS[role]:
+            if tag in tag_set:
+                return StrategyMethod(method_id=method_id, description=description)
+        return None
 
     @staticmethod
     def _warnings(
