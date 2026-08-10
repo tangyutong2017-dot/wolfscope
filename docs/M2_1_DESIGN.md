@@ -62,7 +62,7 @@ EventLog 与 `PlayerViewBuilder` 继续充当信息流权威。本阶段不引�
 
 ## 当前实现状态
 
-离线部分已经完成：AgentScope DeepSeek 模型适配器会把授权快照转换成一条 system message 和一条 user message，调用框架的 structured output 接口，失败时最多进行一次格式修复。若调用方显式开启安全降级，发言会变为可审计的中性发言，投票会变为弃票；调用记录保留原失败状态并标记 `fallback_used=true`。
+离线部分已经完成：AgentScope DeepSeek 模型适配器会把授权快照转换成一条 system message 和一条 user message，调用框架的 structured output 接口，失败时最多进行一次格式修复。DeepSeek thinking 模式下 AgentScope 只能使用自动工具选择，模型可能结束推理却不提交结构化结果；因此首次决策保留正式模型的 thinking，格式修复则使用同一模型的 non-thinking 实例强制结构化输出。请求异常同样允许进入该修复路径。只有两次均失败时，调用方才使用可审计安全降级；调用记录保存每次尝试的 thinking 状态、失败原因并标记 `fallback_used=true`。
 
 2026-08-07 已完成 `deepseek-v4-flash` 单玩家冒烟：发言结构化结果首次通过，耗时 4428 ms，输入 1335 token、输出 333 token；投票在 `(1, 7)` 对跳预言家候选中选择合法目标 7 号，首次通过，耗时 9909 ms，输入 1690 token、输出 759 token。两次调用均未触发格式修复或 fallback。
 

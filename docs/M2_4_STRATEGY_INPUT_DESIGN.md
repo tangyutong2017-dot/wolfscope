@@ -47,7 +47,7 @@ Strategy 不读取 GOD Replay，不替 Engine 判定规则，不把公开 Claim 
 - `objective`：隐藏、预言家对跳、压制预言家或混合路线；
 - `primary_claimant` / `claimed_role`：唯一主跳狼及其伪装身份；
 - `fake_check_target` / `fake_check_alignment`：悍跳预言家的完整假查验；
-- `focus_target` / `plan_reason`：本轮共同施压目标和不超过一句的计划依据；
+- `focus_target` / `plan_reason`：本轮共同施压目标和不超过一句的计划依据；除纯隐藏计划外，共同目标不得为空；
 - `assignments`：每只存活狼的 `claimant/support/distance/hide` 姿态。
 
 Runtime 校验计划天数、存活狼人集合、共同目标合法性、唯一主跳狼和假查验字段一致性。每夜由协调狼随刀口决策重新生成当日计划；合法计划进入 `AgentGameProvider.wolf_team_plan_history`，并只注入狼人后续的 `StrategyBrief`。每只狼根据自己的 assignment 获得不同的执行方法，好人视图和 Strategy 均不包含计划或私有标签。完整局诊断保存每夜计划，标准 GOD Replay 仍只记录 Engine 信息。模型调用失败时使用“全员隐藏、无人悍跳”的确定性合法计划，不中断对局。

@@ -89,9 +89,10 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_retries_once_with_schema_repair_instruction(self) -> None:
         model = StubStructuredModel(
-            [RuntimeError("Failed to generate structured output for model."), valid_speech()],
+            [RuntimeError("Failed to generate structured output for model.")],
         )
-        gateway = AgentScopeModelGateway(model)
+        repair_model = StubStructuredModel([valid_speech()])
+        gateway = AgentScopeModelGateway(model, repair_model)
 
         result = await gateway.structured_call(
             player=4,
@@ -101,8 +102,9 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
             config=model_config_for(ModelProfile.TEST),
         )
 
-        self.assertEqual(len(model.calls), 2)
-        repair_prompt = model.calls[1][0][-1].get_text_content()
+        self.assertEqual(len(model.calls), 1)
+        self.assertEqual(len(repair_model.calls), 1)
+        repair_prompt = repair_model.calls[0][0][-1].get_text_content()
         self.assertIn("未通过结构化校验", repair_prompt)
         self.assertEqual(result.record.retry_count, 1)
         self.assertEqual(len(result.record.attempts), 2)
@@ -112,6 +114,7 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(result.record.attempts[1].stage, "schema_repair")
         self.assertTrue(result.record.attempts[1].success)
+        self.assertFalse(result.record.attempts[1].thinking_enabled)
 
     async def test_exhausted_repair_is_auditable(self) -> None:
         model = StubStructuredModel(
@@ -138,9 +141,10 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(len(raised.exception.record.attempts), 2)
 
-    async def test_request_failure_is_auditable_without_schema_retry(self) -> None:
+    async def test_request_failure_uses_nonthinking_repair_then_is_auditable(self) -> None:
         model = StubStructuredModel([OSError("network unavailable")])
-        gateway = AgentScopeModelGateway(model)
+        repair_model = StubStructuredModel([OSError("still unavailable")])
+        gateway = AgentScopeModelGateway(model, repair_model)
 
         with self.assertRaises(ModelGatewayError) as raised:
             await gateway.structured_call(
@@ -152,10 +156,11 @@ class AgentScopeGatewayTests(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(len(model.calls), 1)
+        self.assertEqual(len(repair_model.calls), 1)
         self.assertEqual(raised.exception.record.error_type, "request_error")
-        self.assertEqual(raised.exception.record.failure_stage, "generation")
+        self.assertEqual(raised.exception.record.failure_stage, "schema_repair")
         self.assertEqual(raised.exception.record.failure_reason, "request_exception")
-        self.assertEqual(len(raised.exception.record.attempts), 1)
+        self.assertEqual(len(raised.exception.record.attempts), 2)
         self.assertFalse(raised.exception.record.success)
 
     async def test_task_must_match_observation(self) -> None:

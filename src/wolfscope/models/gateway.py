@@ -25,6 +25,7 @@ class ModelAttemptRecord(StrictModel):
     latency_ms: int
     token_usage: TokenUsage = Field(default_factory=TokenUsage)
     failure_reason: str | None = None
+    thinking_enabled: bool | None = None
 
 
 class ModelCallRecord(StrictModel):

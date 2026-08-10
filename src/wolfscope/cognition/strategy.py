@@ -171,6 +171,8 @@ class WolfTeamPlan(StrictModel):
                     raise ValueError("seer claimant requires a complete fake check")
             elif self.fake_check_target is not None or self.fake_check_alignment is not None:
                 raise ValueError("only a seer claim can contain a fake check")
+        if self.objective != "hide" and self.focus_target is None:
+            raise ValueError("an active wolf plan requires a focus target")
         return self
 
 

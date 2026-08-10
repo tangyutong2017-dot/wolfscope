@@ -40,8 +40,13 @@ class StructuredModel(Protocol):
 class AgentScopeModelGateway:
     """Translate WolfScope contracts to AgentScope messages and responses."""
 
-    def __init__(self, model: StructuredModel) -> None:
+    def __init__(
+        self,
+        model: StructuredModel,
+        repair_model: StructuredModel | None = None,
+    ) -> None:
         self._model = model
+        self._repair_model = repair_model or model
         self.records: list[ModelCallRecord] = []
         self.messages: list[tuple[Msg, ...]] = []
 
@@ -55,11 +60,12 @@ class AgentScopeModelGateway:
         api_key = os.environ.get(api_key_env)
         if not api_key:
             raise RuntimeError(f"missing required environment variable: {api_key_env}")
+        credential = DeepSeekCredential(
+            api_key=api_key,
+            base_url=config.base_url,
+        )
         model = DeepSeekChatModel(
-            credential=DeepSeekCredential(
-                api_key=api_key,
-                base_url=config.base_url,
-            ),
+            credential=credential,
             model=config.model_name,
             parameters=DeepSeekChatModel.Parameters(
                 max_tokens=config.max_tokens,
@@ -70,7 +76,19 @@ class AgentScopeModelGateway:
             max_retries=config.request_max_retries,
             client_kwargs={"timeout": config.request_timeout_seconds},
         )
-        return cls(model)
+        repair_model = DeepSeekChatModel(
+            credential=credential,
+            model=config.model_name,
+            parameters=DeepSeekChatModel.Parameters(
+                max_tokens=config.max_tokens,
+                thinking_enable=False,
+                temperature=0.0,
+            ),
+            stream=False,
+            max_retries=config.request_max_retries,
+            client_kwargs={"timeout": config.request_timeout_seconds},
+        )
+        return cls(model, repair_model)
 
     async def structured_call(
         self,
@@ -102,7 +120,8 @@ class AgentScopeModelGateway:
                     ),
                 )
             try:
-                response = await self._model.generate_structured_output(
+                active_model = self._model if attempt == 0 else self._repair_model
+                response = await active_model.generate_structured_output(
                     call_messages,
                     output_schema,
                     max_tokens=config.max_tokens,
@@ -117,6 +136,7 @@ class AgentScopeModelGateway:
                         success=False,
                         latency_ms=self._elapsed_ms(attempt_started),
                         failure_reason=self._failure_reason(error),
+                        thinking_enabled=config.thinking_enabled if attempt == 0 else False,
                     ),
                 )
                 continue
@@ -129,23 +149,11 @@ class AgentScopeModelGateway:
                         success=False,
                         latency_ms=self._elapsed_ms(attempt_started),
                         failure_reason=failure_reason,
+                        thinking_enabled=config.thinking_enabled if attempt == 0 else False,
                     ),
                 )
-                record = self._record(
-                    player=player,
-                    task=task,
-                    config=config,
-                    response=None,
-                    started=started,
-                    success=False,
-                    retry_count=0,
-                    error_type="request_error",
-                    failure_stage=stage,
-                    failure_reason=failure_reason,
-                    attempts=tuple(attempt_records),
-                )
-                self.records.append(record)
-                raise ModelGatewayError("AgentScope model request failed", record) from error
+                last_error = error
+                continue
 
             usage = self._usage(response)
             attempt_records.append(
@@ -155,6 +163,7 @@ class AgentScopeModelGateway:
                     success=True,
                     latency_ms=self._elapsed_ms(attempt_started),
                     token_usage=usage,
+                    thinking_enabled=config.thinking_enabled if attempt == 0 else False,
                 ),
             )
             record = self._record(
@@ -170,6 +179,8 @@ class AgentScopeModelGateway:
             self.records.append(record)
             return ModelCallResult(value=value, record=record)
 
+        last_attempt = attempt_records[-1]
+        request_failure = last_attempt.failure_reason == "request_exception"
         record = self._record(
             player=player,
             task=task,
@@ -178,13 +189,18 @@ class AgentScopeModelGateway:
             started=started,
             success=False,
             retry_count=attempts - 1,
-            error_type="structured_output",
-            failure_stage=attempt_records[-1].stage,
-            failure_reason=attempt_records[-1].failure_reason,
+            error_type="request_error" if request_failure else "structured_output",
+            failure_stage=last_attempt.stage,
+            failure_reason=last_attempt.failure_reason,
             attempts=tuple(attempt_records),
         )
         self.records.append(record)
-        raise ModelGatewayError("AgentScope structured output failed", record) from last_error
+        message = (
+            "AgentScope model request failed"
+            if request_failure
+            else "AgentScope structured output failed"
+        )
+        raise ModelGatewayError(message, record) from last_error
 
     @staticmethod
     def _messages(

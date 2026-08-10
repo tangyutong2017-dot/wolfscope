@@ -41,6 +41,22 @@ def view_for(seat: int):
 
 
 class StrategyBuilderTests(unittest.TestCase):
+    def test_active_wolf_plan_requires_focus_target(self) -> None:
+        from wolfscope.cognition.strategy import WolfAssignment, WolfPosture, WolfTeamPlan
+
+        with self.assertRaisesRegex(ValueError, "focus target"):
+            WolfTeamPlan(
+                day=1,
+                objective="seer_pressure",
+                primary_claimant=None,
+                claimed_role=None,
+                fake_check_target=None,
+                fake_check_alignment=None,
+                focus_target=None,
+                plan_reason="压制预言家",
+                assignments=(WolfAssignment(seat=2, posture=WolfPosture.HIDE),),
+            )
+
     def test_all_roles_receive_small_distinct_playbooks(self) -> None:
         builder = StrategyBuilder()
         playbooks = {
