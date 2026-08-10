@@ -88,6 +88,11 @@ class StrategySituationBuilder:
         alive = {player.seat for player in view.players if player.alive}
         if len(alive) <= 5:
             tags.add(SituationTag.ENDGAME_PRESSURE)
+        if view.ruleset == "standard-9-v1" and any(
+            event.event_type == "peaceful_night" and event.day == view.day
+            for event in view.visible_events
+        ):
+            tags.add(SituationTag.PEACEFUL_NIGHT_CONFIRMS_WITCH_SAVE)
         candidates = set(getattr(observation, "candidates", ()))
         if view.own_role is RoleType.SEER and candidates:
             for event in view.visible_events:
@@ -449,7 +454,7 @@ class StrategyBuilder:
                 description="公开声明只代表发言者观点，不把它直接当成已验证事实。",
             ),
         )
-        warnings = self._warnings(role, situation)
+        warnings = self._warnings(role, situation, situation_tags)
         return StrategyBrief(
             owner=owner,
             day=day,
@@ -559,6 +564,7 @@ class StrategyBuilder:
     def _warnings(
         role: RoleType,
         situation: DecisionBrief | None,
+        situation_tags: tuple[SituationTag, ...],
     ) -> list[StrategyWarning]:
         warnings: list[StrategyWarning] = []
         if role in {RoleType.WEREWOLF, RoleType.SEER, RoleType.WITCH}:
@@ -566,6 +572,13 @@ class StrategyBuilder:
                 StrategyWarning(
                     warning_id="private_information_leak",
                     description="公开表达不得无意泄露仅自己或己方知道的夜间信息。",
+                ),
+            )
+        if SituationTag.PEACEFUL_NIGHT_CONFIRMS_WITCH_SAVE in situation_tags:
+            warnings.append(
+                StrategyWarning(
+                    warning_id="no_empty_kill_peaceful_night",
+                    description="本规则狼人每夜必须选择刀口、不能空刀；当日平安夜必然表示女巫使用解药救人，不得再说可能空刀。",
                 ),
             )
         if situation is None:

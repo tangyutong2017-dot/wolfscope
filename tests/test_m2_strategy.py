@@ -22,6 +22,7 @@ from wolfscope.cognition.strategy import (
     StrategyBuilder,
     StrategySituationBuilder,
 )
+from wolfscope.contracts import Visibility
 from wolfscope.game import GameState, PlayerState
 from wolfscope.game.config import STANDARD_9_RULES
 from wolfscope.game.events import EventLog
@@ -192,6 +193,47 @@ class StrategyBuilderTests(unittest.TestCase):
         self.assertIn(SituationTag.CLAIMED_WOLF_EXISTS, tags)
         self.assertIn(SituationTag.SELF_RECEIVED_WOLF_CHECK, tags)
         self.assertIn(SituationTag.SELF_UNDER_PRESSURE, tags)
+
+    def test_peaceful_night_adds_no_empty_kill_rule_warning(self) -> None:
+        state = GameState(
+            players=[
+                PlayerState(seat=index, role=role)
+                for index, role in enumerate(STANDARD_9_RULES.roles, start=1)
+            ],
+            day=1,
+            phase=Phase.DAY_SPEECH,
+        )
+        events = EventLog()
+        events.emit(
+            day=1,
+            phase=Phase.DAWN_ANNOUNCEMENT,
+            event_type="peaceful_night",
+            visibility=Visibility.PUBLIC,
+            content="昨夜是平安夜",
+            data={"deaths": []},
+        )
+        view = PlayerViewBuilder(state, events).build(4)
+        tags = StrategySituationBuilder().build(
+            view=view,
+            observation=SpeechTaskObservation(
+                actor=4,
+                speaking_order=tuple(range(1, 10)),
+                previous_speeches=(),
+                can_explode=False,
+            ),
+            brief=None,
+            wolf_team_plan=None,
+        )
+        brief = StrategyBuilder().build(
+            owner=4,
+            role=RoleType.VILLAGER,
+            day=1,
+            task="speech",
+            situation_tags=tags,
+        )
+
+        self.assertIn(SituationTag.PEACEFUL_NIGHT_CONFIRMS_WITCH_SAVE, tags)
+        self.assertIn("no_empty_kill_peaceful_night", brief.strategy_ids)
 
     def test_good_role_rejects_wolf_private_situation_tag(self) -> None:
         with self.assertRaisesRegex(ValueError, "wolf-private"):

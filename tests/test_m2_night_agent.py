@@ -116,7 +116,7 @@ class NightAgentIntegrationTests(unittest.IsolatedAsyncioTestCase):
             7,
         )
         self.assertIn(
-            "execute_claimant_posture",
+            "wolf_claimant_must_run",
             wolf_signup_input.strategy_brief.strategy_ids,
         )
         self.assertIsNone(good_signup_input.strategy_brief.wolf_team_plan)
