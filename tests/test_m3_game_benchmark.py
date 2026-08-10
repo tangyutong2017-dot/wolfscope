@@ -10,6 +10,7 @@ from wolfscope.agents.schemas import VoteContextMode
 from wolfscope.evaluation.game_benchmark import (
     aggregate_directory,
     aggregate_games,
+    analyze_replay,
     parse_seeds,
     render_report,
     run_evaluation,
@@ -55,6 +56,13 @@ def game_result(seed: int, winner: str = "good") -> dict:
             "output_tokens": 50,
             "latency_ms": 700,
         },
+        "gameplay_metrics": {
+            "votes": 10,
+            "abstentions": 2,
+            "exiles": 2,
+            "wolf_exiles": 1,
+            "good_exiles": 1,
+        },
     }
 
 
@@ -79,6 +87,29 @@ class GameBenchmarkAggregationTests(unittest.TestCase):
         self.assertEqual(summary["totals"]["l3_fallbacks"], 2)
         self.assertEqual(summary["by_task"]["vote"]["success_rate"], 1.0)
         self.assertEqual(summary["averages"]["model_latency_ms"], 5000)
+        self.assertEqual(summary["gameplay"]["abstentions"], 4)
+        self.assertEqual(summary["gameplay"]["abstention_rate"], 0.2)
+
+    def test_analyzes_gameplay_quality_from_god_replay(self) -> None:
+        replay = {
+            "roles": {"1": "seer", "2": "werewolf", "3": "hunter", "4": "villager"},
+            "events": [
+                {"event_type": "seer_result", "actor": 1, "target": 2, "data": {"alignment": "werewolf"}},
+                {"event_type": "exile_votes", "actor": None, "target": None, "data": {"votes": [{"voter": 1, "target": 2}, {"voter": 2, "target": None}]}},
+                {"event_type": "player_exiled", "actor": 2, "target": None, "data": {}},
+                {"event_type": "badge_transferred", "actor": 1, "target": 2, "data": {}},
+                {"event_type": "hunter_shot", "actor": 3, "target": 2, "data": {"target": 2}},
+            ],
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "replay.json"
+            path.write_text(json.dumps(replay), encoding="utf-8")
+            metrics = analyze_replay(path)
+
+        self.assertEqual(metrics["abstentions"], 1)
+        self.assertEqual(metrics["wolf_exiles"], 1)
+        self.assertEqual(metrics["hunter_wolf_hits"], 1)
+        self.assertEqual(metrics["seer_badge_to_checked_wolf"], 1)
 
     def test_report_is_portfolio_readable_and_discloses_limits(self) -> None:
         summary = aggregate_games((game_result(1),), requested_seeds=(1,))

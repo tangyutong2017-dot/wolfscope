@@ -17,6 +17,28 @@ from wolfscope.models.config import ModelProfile
 
 REPORT_VERSION = "m3-game-eval-v1"
 
+GAMEPLAY_COUNT_KEYS = (
+    "votes",
+    "abstentions",
+    "exiles",
+    "wolf_exiles",
+    "good_exiles",
+    "seer_checks",
+    "seer_wolf_checks",
+    "witch_saves",
+    "witch_poisons",
+    "witch_poison_wolf_hits",
+    "witch_poison_good_hits",
+    "hunter_opportunities",
+    "hunter_shots",
+    "hunter_wolf_hits",
+    "hunter_good_hits",
+    "seer_badge_transfers",
+    "seer_badge_to_checked_good",
+    "seer_badge_to_checked_wolf",
+    "seer_badge_to_unknown",
+)
+
 
 def parse_seeds(value: str) -> tuple[int, ...]:
     try:
@@ -40,6 +62,7 @@ def aggregate_games(
     failed = sorted(failures, key=lambda item: item["seed"])
     winners = {"good": 0, "werewolf": 0, "unfinished": 0}
     task_totals: dict[str, dict[str, int]] = {}
+    gameplay_totals = {key: 0 for key in GAMEPLAY_COUNT_KEYS}
     totals = {
         "decisions": 0,
         "successful": 0,
@@ -131,8 +154,11 @@ def aggregate_games(
                 "events": game.get("event_count", 0),
                 **values,
                 "replay": game.get("replay_output"),
+                "gameplay": game.get("gameplay_metrics"),
             },
         )
+        for key in GAMEPLAY_COUNT_KEYS:
+            gameplay_totals[key] += game.get("gameplay_metrics", {}).get(key, 0)
 
     completed = len(games)
     terminal = winners["good"] + winners["werewolf"]
@@ -181,6 +207,21 @@ def aggregate_games(
             }
             for task, stats in sorted(task_totals.items())
         },
+        "gameplay": {
+            **gameplay_totals,
+            "abstention_rate": _rate(
+                gameplay_totals["abstentions"],
+                gameplay_totals["votes"],
+            ),
+            "wolf_exile_rate": _rate(
+                gameplay_totals["wolf_exiles"],
+                gameplay_totals["exiles"],
+            ),
+            "hunter_shot_rate": _rate(
+                gameplay_totals["hunter_shots"],
+                gameplay_totals["hunter_opportunities"],
+            ),
+        },
         "games": rows,
         "failures": failed,
         "measurement_notes": [
@@ -195,6 +236,7 @@ def render_report(summary: dict[str, Any], config: dict[str, Any]) -> str:
     totals = summary["totals"]
     rates = summary["decision_rates"]
     winners = summary["winner_counts"]
+    gameplay = summary["gameplay"]
     lines = [
         "# WolfScope 自动对局评测报告",
         "",
@@ -211,6 +253,9 @@ def render_report(summary: dict[str, Any], config: dict[str, Any]) -> str:
         f"- L2 修复：{totals['l2_repairs']} 次（{_percent(rates['l2_repair'])}）；L3 兜底：{totals['l3_fallbacks']} 次（{_percent(rates['l3_fallback'])}）。",
         f"- Thinking / Non-thinking：{totals['thinking_calls']} / {totals['nonthinking_calls']}。",
         f"- 累计模型延迟：{totals['model_latency_ms'] / 1000:.1f} 秒；输出 tokens：{totals['output_tokens']}。",
+        f"- 放逐投票弃票：{gameplay['abstentions']} / {gameplay['votes']}（{_percent(gameplay['abstention_rate'])}）。",
+        f"- 放逐狼人/好人：{gameplay['wolf_exiles']} / {gameplay['good_exiles']}；猎人开枪：{gameplay['hunter_shots']} / {gameplay['hunter_opportunities']}。",
+        f"- 预言家警徽交给本人已验狼人：{gameplay['seer_badge_to_checked_wolf']} 次。",
         "",
         "## 逐局结果",
         "",
@@ -319,6 +364,8 @@ async def run_evaluation(
                 _write_outputs(output_dir, config, seeds, results, failures)
                 raise
         else:
+            if "gameplay_metrics" not in result:
+                result["gameplay_metrics"] = analyze_replay(replay_path)
             _write_json(diagnostic_path, result)
             (failures_dir / f"seed-{seed}.json").unlink(missing_ok=True)
             results.append(result)
@@ -333,15 +380,86 @@ async def run_evaluation(
 def aggregate_directory(output_dir: Path) -> dict[str, Any]:
     config = _read_json(output_dir / "config.json")
     seeds = tuple(config["seeds"])
-    results = [
-        _read_json(path)
-        for path in sorted((output_dir / "diagnostics").glob("seed-*.json"))
-    ]
+    results = []
+    for path in sorted((output_dir / "diagnostics").glob("seed-*.json")):
+        result = _read_json(path)
+        replay_path = Path(result.get("replay_output", ""))
+        if "gameplay_metrics" not in result and replay_path.is_file():
+            result["gameplay_metrics"] = analyze_replay(replay_path)
+            _write_json(path, result)
+        results.append(result)
     failures = [
         _read_json(path)
         for path in sorted((output_dir / "failures").glob("seed-*.json"))
     ]
     return _write_outputs(output_dir, config, seeds, results, failures)
+
+
+def analyze_replay(path: Path) -> dict[str, int | float | None]:
+    """Extract deterministic gameplay-quality counters from one GOD replay."""
+
+    replay = _read_json(path)
+    roles = {int(seat): role for seat, role in replay["roles"].items()}
+    metrics = {key: 0 for key in GAMEPLAY_COUNT_KEYS}
+    seer_checks: dict[int, dict[int, str]] = {}
+    for event in replay["events"]:
+        event_type = event["event_type"]
+        data = event.get("data", {})
+        if event_type == "exile_votes":
+            votes = data.get("votes", [])
+            metrics["votes"] += len(votes)
+            metrics["abstentions"] += sum(
+                vote.get("target") is None for vote in votes
+            )
+        elif event_type == "player_exiled":
+            metrics["exiles"] += 1
+            key = "wolf_exiles" if roles[event["actor"]] == "werewolf" else "good_exiles"
+            metrics[key] += 1
+        elif event_type == "seer_result":
+            metrics["seer_checks"] += 1
+            alignment = data.get("alignment")
+            if alignment == "werewolf":
+                metrics["seer_wolf_checks"] += 1
+            seer_checks.setdefault(event["actor"], {})[event["target"]] = alignment
+        elif event_type == "witch_action":
+            action = data.get("action")
+            if action == "save":
+                metrics["witch_saves"] += 1
+            elif action == "poison":
+                metrics["witch_poisons"] += 1
+                target = data.get("target")
+                if target is not None:
+                    key = (
+                        "witch_poison_wolf_hits"
+                        if roles[target] == "werewolf"
+                        else "witch_poison_good_hits"
+                    )
+                    metrics[key] += 1
+        elif event_type == "hunter_shot":
+            metrics["hunter_opportunities"] += 1
+            metrics["hunter_shots"] += 1
+            target = data["target"]
+            key = "hunter_wolf_hits" if roles[target] == "werewolf" else "hunter_good_hits"
+            metrics[key] += 1
+        elif event_type == "hunter_did_not_shoot":
+            metrics["hunter_opportunities"] += 1
+        elif event_type == "badge_transferred" and roles[event["actor"]] == "seer":
+            metrics["seer_badge_transfers"] += 1
+            alignment = seer_checks.get(event["actor"], {}).get(event["target"])
+            key = {
+                "good": "seer_badge_to_checked_good",
+                "werewolf": "seer_badge_to_checked_wolf",
+            }.get(alignment, "seer_badge_to_unknown")
+            metrics[key] += 1
+    return {
+        **metrics,
+        "abstention_rate": _rate(metrics["abstentions"], metrics["votes"]),
+        "wolf_exile_rate": _rate(metrics["wolf_exiles"], metrics["exiles"]),
+        "hunter_shot_rate": _rate(
+            metrics["hunter_shots"],
+            metrics["hunter_opportunities"],
+        ),
+    }
 
 
 def _write_outputs(
