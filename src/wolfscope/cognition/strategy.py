@@ -58,6 +58,9 @@ class SituationTag(StrEnum):
     SELF_RECEIVED_GOOD_CHECK = "self_received_good_check"
     TEAMMATE_UNDER_PRESSURE = "teammate_under_pressure"
     CLAIMANT_IS_TEAMMATE = "claimant_is_teammate"
+    OWN_CONFIRMED_WOLF_CANDIDATE = "own_confirmed_wolf_candidate"
+    OWN_CONFIRMED_GOOD_CANDIDATE = "own_confirmed_good_candidate"
+    PEACEFUL_NIGHT_CONFIRMS_WITCH_SAVE = "peaceful_night_confirms_witch_save"
 
 
 WOLF_PRIVATE_SITUATION_TAGS = {
@@ -85,6 +88,17 @@ class StrategySituationBuilder:
         alive = {player.seat for player in view.players if player.alive}
         if len(alive) <= 5:
             tags.add(SituationTag.ENDGAME_PRESSURE)
+        candidates = set(getattr(observation, "candidates", ()))
+        if view.own_role is RoleType.SEER and candidates:
+            for event in view.visible_events:
+                if event.event_type != "seer_result" or event.actor != view.viewer_seat:
+                    continue
+                if event.target not in candidates:
+                    continue
+                if event.data.get("alignment") == "werewolf":
+                    tags.add(SituationTag.OWN_CONFIRMED_WOLF_CANDIDATE)
+                elif event.data.get("alignment") == "good":
+                    tags.add(SituationTag.OWN_CONFIRMED_GOOD_CANDIDATE)
         if brief is not None:
             seer_claimants = {
                 claim.speaker
@@ -288,6 +302,8 @@ class StrategyBuilder:
             (SituationTag.ENDGAME_PRESSURE, "converge_endgame_vote", "残局减少无依据分票，明确比较候选人与可验证依据。"),
         ),
         RoleType.SEER: (
+            (SituationTag.OWN_CONFIRMED_WOLF_CANDIDATE, "vote_own_confirmed_wolf", "合法候选中存在本人真实查杀时，投票必须优先投该查杀。"),
+            (SituationTag.OWN_CONFIRMED_GOOD_CANDIDATE, "protect_own_confirmed_good", "本人真实金水不是放逐目标，不得因公开压力把票投给自己的金水。"),
             (SituationTag.SELF_UNDER_PRESSURE, "preserve_seer_information", "受压时优先完整交代真实查验和后续验人方向，避免信息随死亡丢失。"),
             (SituationTag.MULTIPLE_SEER_CLAIMS, "handle_counterclaim", "出现对跳时比较双方查验、时间线、警徽流和信息完整度。"),
             (SituationTag.SINGLE_SEER_CLAIM, "build_seer_credibility", "无人对跳时持续给出可验证查验计划，不靠身份声称要求盲信。"),

@@ -85,6 +85,32 @@ def vote_input(seat: int = 4) -> AgentDecisionInput:
     )
 
 
+def seer_vote_input(*, alignment: str, target: int) -> AgentDecisionInput:
+    events = EventLog()
+    events.emit(
+        day=1,
+        phase=Phase.NIGHT_SEER,
+        event_type="seer_result",
+        visibility=Visibility.PRIVATE,
+        recipients=(7,),
+        actor=7,
+        target=target,
+        content=f"查验{target}号结果为{alignment}",
+        data={"target": target, "alignment": alignment},
+    )
+    view = PlayerViewBuilder(game_state(), events).build(7)
+    return AgentDecisionInput(
+        player_view=view,
+        public_summary=PublicGameSummary.from_view(view),
+        observation=VoteTaskObservation(
+            voter=7,
+            vote_round=ExileVoteRound.FIRST,
+            candidates=(1, 4),
+            speeches=(),
+        ),
+    )
+
+
 class ModelConfigTests(unittest.IsolatedAsyncioTestCase):
     def test_test_and_production_profiles_use_flash(self) -> None:
         self.assertEqual(
@@ -205,6 +231,44 @@ class DecisionSchemaTests(unittest.IsolatedAsyncioTestCase):
 
 
 class FakeGatewayAndRuntimeTests(unittest.IsolatedAsyncioTestCase):
+    async def test_seer_vote_is_constrained_by_own_confirmed_wolf(self) -> None:
+        decision_input = seer_vote_input(alignment="werewolf", target=1)
+        runtime = PlayerRuntime(
+            7,
+            model_config_for(ModelProfile.TEST),
+            FakeModelGateway([
+                VoteDecision(target=4, confidence=0.5, reason="错误忽略本人查杀"),
+            ]),
+        )
+
+        decision = await runtime.decide(
+            task=DecisionTask.VOTE,
+            decision_input=decision_input,
+            output_schema=VoteDecision,
+        )
+
+        self.assertEqual(decision.target, 1)
+        self.assertEqual(runtime.call_records[0].error_type, "seer_check_constraint")
+
+    async def test_seer_does_not_vote_own_confirmed_good(self) -> None:
+        decision_input = seer_vote_input(alignment="good", target=4)
+        runtime = PlayerRuntime(
+            7,
+            model_config_for(ModelProfile.TEST),
+            FakeModelGateway([
+                VoteDecision(target=4, confidence=0.5, reason="错误投本人金水"),
+            ]),
+        )
+
+        decision = await runtime.decide(
+            task=DecisionTask.VOTE,
+            decision_input=decision_input,
+            output_schema=VoteDecision,
+        )
+
+        self.assertIsNone(decision.target)
+        self.assertEqual(runtime.call_records[0].error_type, "seer_check_constraint")
+
     async def test_fake_flash_call_returns_schema_and_trace(self) -> None:
         gateway = FakeModelGateway(
             [
