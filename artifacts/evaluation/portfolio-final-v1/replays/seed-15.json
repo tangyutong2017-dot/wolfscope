@@ -1,0 +1,1396 @@
+{
+  "schema_version": "1.0",
+  "game_id": "m2-deepseek-v4-flash-full-seed-15",
+  "seed": 15,
+  "status": "finished",
+  "winner": "good",
+  "win_reason": "all_wolves_dead",
+  "days": 4,
+  "roles": {
+    "1": "hunter",
+    "2": "villager",
+    "3": "werewolf",
+    "4": "seer",
+    "5": "villager",
+    "6": "werewolf",
+    "7": "werewolf",
+    "8": "witch",
+    "9": "villager"
+  },
+  "final_alive": [
+    9
+  ],
+  "events": [
+    {
+      "event_id": 1,
+      "day": 1,
+      "phase": "setup",
+      "event_type": "game_started",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "九人狼人杀开始",
+      "data": {
+        "game_id": "m2-deepseek-v4-flash-full-seed-15",
+        "seed": 15
+      }
+    },
+    {
+      "event_id": 2,
+      "day": 1,
+      "phase": "setup",
+      "event_type": "wolf_teammates",
+      "visibility": "wolves",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "狼队成员：3号、6号、7号",
+      "data": {
+        "seats": [
+          3,
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "event_id": 3,
+      "day": 1,
+      "phase": "setup",
+      "event_type": "initial_roles",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "初始身份已确定",
+      "data": {
+        "roles": [
+          {
+            "seat": 1,
+            "role": "hunter"
+          },
+          {
+            "seat": 2,
+            "role": "villager"
+          },
+          {
+            "seat": 3,
+            "role": "werewolf"
+          },
+          {
+            "seat": 4,
+            "role": "seer"
+          },
+          {
+            "seat": 5,
+            "role": "villager"
+          },
+          {
+            "seat": 6,
+            "role": "werewolf"
+          },
+          {
+            "seat": 7,
+            "role": "werewolf"
+          },
+          {
+            "seat": 8,
+            "role": "witch"
+          },
+          {
+            "seat": 9,
+            "role": "villager"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": 4,
+      "day": 1,
+      "phase": "night_wolf",
+      "event_type": "wolf_target",
+      "visibility": "wolves",
+      "recipients": [],
+      "actor": null,
+      "target": 4,
+      "content": "狼队选择袭击 4 号",
+      "data": {
+        "target": 4
+      }
+    },
+    {
+      "event_id": 5,
+      "day": 1,
+      "phase": "night_seer",
+      "event_type": "seer_result",
+      "visibility": "private",
+      "recipients": [
+        4
+      ],
+      "actor": 4,
+      "target": 1,
+      "content": "查验 1 号的结果为 good",
+      "data": {
+        "target": 1,
+        "alignment": "good"
+      }
+    },
+    {
+      "event_id": 6,
+      "day": 1,
+      "phase": "night_witch",
+      "event_type": "witch_night_victim",
+      "visibility": "private",
+      "recipients": [
+        8
+      ],
+      "actor": 8,
+      "target": 4,
+      "content": "今晚狼队袭击了 4 号",
+      "data": {
+        "target": 4
+      }
+    },
+    {
+      "event_id": 7,
+      "day": 1,
+      "phase": "night_witch",
+      "event_type": "witch_action",
+      "visibility": "private",
+      "recipients": [
+        8
+      ],
+      "actor": 8,
+      "target": 4,
+      "content": "女巫选择 save",
+      "data": {
+        "action": "save",
+        "target": 4
+      }
+    },
+    {
+      "event_id": 8,
+      "day": 1,
+      "phase": "night_resolution",
+      "event_type": "night_resolution",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "夜间内部结算完成，死亡尚未公布",
+      "data": {
+        "pending_deaths": [],
+        "wolf_recipients": [
+          3,
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "event_id": 9,
+      "day": 1,
+      "phase": "sheriff_signup",
+      "event_type": "sheriff_candidates",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "上警玩家：1号、2号、4号、8号",
+      "data": {
+        "candidates": [
+          1,
+          2,
+          4,
+          8
+        ]
+      }
+    },
+    {
+      "event_id": 10,
+      "day": 1,
+      "phase": "sheriff_speech",
+      "event_type": "sheriff_campaign_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 8,
+      "target": null,
+      "content": "我竞选警长。我是普通好人视角，愿意帮大家理清秩序：白天让预言家先报查验，每位对跳者的查验各自独立记录，谁的查验可信由大家根据发言和票型判断，不把别人声称的查验当成事实。第一天无死亡，信息少，警徽要用来稳定局面、归票，而不是带节奏。我拿到警徽会严格按发言归属记录信息，不歪曲任何人的查验，请大家支持。",
+      "data": {}
+    },
+    {
+      "event_id": 11,
+      "day": 1,
+      "phase": "sheriff_speech",
+      "event_type": "sheriff_campaign_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 1,
+      "target": null,
+      "content": "我竞选警长。我的立场是把警徽当成归票和整理信息的工具，而不是带节奏的扩音器。组织信息我会严格执行：每一位预言家对跳者的查验体系独立记录、互不串联，查验只归属于实际发表它的人；别人声称的查验只算发言，不算事实。白天先让预言家完整报查验，我负责归纳分歧、控制发言秩序，平票按规则处理。我暂不亮身份，但请相信我不会歪曲任何信息，把票投给能稳住场的人。",
+      "data": {}
+    },
+    {
+      "event_id": 12,
+      "day": 1,
+      "phase": "sheriff_speech",
+      "event_type": "sheriff_campaign_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 2,
+      "target": null,
+      "content": "我是2号，竞选警长。我是普通好人，没有特殊身份，所以没有立场包袱，警徽只是工具。组织信息的方法：白天先让预言家完整报查验，每位对跳者的查验体系独立记录、互不串联，查验只归属于实际发表它的人；别人声称的查验只算发言、不算事实。我会控制发言秩序、归纳分歧、按规则归票和处理平票，绝不歪曲任何人的发言。请大家支持2号。",
+      "data": {}
+    },
+    {
+      "event_id": 13,
+      "day": 1,
+      "phase": "sheriff_speech",
+      "event_type": "sheriff_campaign_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": null,
+      "content": "我是4号，真预言家，竞选警长。首夜查验1号，结果为金水，这是我自己视角确认的事实。我若拿到警徽：白天先报当日查验，再组织发言；每位对跳预言家的查验体系独立记录、互不串联，别人声称的查验只算发言、绝不当作事实。1号是我金水，我不会放逐他。后续每晚我会继续查验并如实公布。警徽是信息整理和归票工具，我会用它稳定局面、控制秩序，请把票投给4号。",
+      "data": {}
+    },
+    {
+      "event_id": 14,
+      "day": 1,
+      "phase": "sheriff_withdrawal",
+      "event_type": "sheriff_withdrawals",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "退水玩家：1号、2号、8号",
+      "data": {
+        "withdrawn": [
+          1,
+          2,
+          8
+        ],
+        "remaining": [
+          4
+        ]
+      }
+    },
+    {
+      "event_id": 15,
+      "day": 1,
+      "phase": "sheriff_vote",
+      "event_type": "sheriff_elected",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": null,
+      "content": "4号当选警长",
+      "data": {
+        "sheriff": 4,
+        "reason": "sole_candidate"
+      }
+    },
+    {
+      "event_id": 16,
+      "day": 1,
+      "phase": "dawn_announcement",
+      "event_type": "peaceful_night",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "昨夜是平安夜",
+      "data": {
+        "deaths": []
+      }
+    },
+    {
+      "event_id": 17,
+      "day": 1,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_death_causes",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "首夜死亡原因已结算",
+      "data": {
+        "deaths": []
+      }
+    },
+    {
+      "event_id": 18,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "speaking_order",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": null,
+      "content": "警长选择clockwise方向，警长最后发言",
+      "data": {
+        "sheriff": 4,
+        "direction": "clockwise",
+        "order": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    },
+    {
+      "event_id": 19,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 5,
+      "target": null,
+      "content": "我是5号，平民。昨晚平安夜，说明女巫用了解药救人，狼人确实出刀了。警长已经选出，4号拿警徽，我认可。目前还没有预言家跳出来报查验，我先不急着站边。希望预言家尽快给出首夜查验结果，大家认真听查验逻辑是否自洽。我会根据查验声明和后续票型来判断，不会盲目跟票。请各位发言时把查验归属说清楚，别混淆。",
+      "data": {}
+    },
+    {
+      "event_id": 20,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 6,
+      "target": null,
+      "content": "我是6号，普通村民。4号在警长竞选里跳了预言家，报了1号金水，最终拿到警徽，这个起跳我目前愿意认，1号我也先不怀疑。昨晚平安夜，狼人每夜必须出刀，所以一定是女巫用解药救了刀口，说明女巫还在。现在信息有限，我不会急着站死边，接下来重点听有没有人和4号对跳预言家，以及后面的票型和发言。先这样。",
+      "data": {}
+    },
+    {
+      "event_id": 21,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 7,
+      "target": null,
+      "content": "我是7号，平民。昨晚平安夜，说明女巫确实用解药救了刀口，狼人是出了刀的。目前4号拿警徽并跳预言家，报1号金水，暂时只有他一个预言家起跳，我倾向先认这个体系，但查验归属要分清，后续若有对跳再对比。我不会盲目跟票，重点听后面的发言和票型。先过。",
+      "data": {}
+    },
+    {
+      "event_id": 22,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 8,
+      "target": null,
+      "content": "我是8号。警长竞选时我参与过，表明普通好人视角后退选了，现在4号拿警徽我没有意见。目前场上只有4号一个预言家起跳，报1号金水，查验归属清晰，我倾向先认这个体系，1号暂时也放一放。昨晚平安夜，说明女巫用解药救过人，女巫还在场，狼人确实出了刀。后面重点听有无对跳、查验逻辑和票型，我不会盲目跟票，按发言和票型再判断。",
+      "data": {}
+    },
+    {
+      "event_id": 23,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 9,
+      "target": null,
+      "content": "我是9号，平民。目前场上只有4号一个预言家起跳，报1号金水，查验归属清晰，我倾向先认这个体系，1号暂时放一放。昨晚平安夜，说明女巫用解药救了刀口，女巫还在场，狼人确实出了刀。警长竞选时1、2、8都参与后退选，4号拿警徽我没有意见。后面重点听有无对跳、查验逻辑和票型，我不会盲目跟票，按发言和票型再判断。先过。",
+      "data": {}
+    },
+    {
+      "event_id": 24,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 1,
+      "target": null,
+      "content": "我是1号。4号在警长竞选跳预言家并报我金水、拿到警徽，目前全场唯一起跳、无直接矛盾，查验归属清晰，我作为被查者先按高可信认下这个体系；但公开查验本质仍是声明，后续若出现对跳我会重新对比。昨晚平安夜必是女巫用解药救人，女巫还在。我暂时保留身份不跳，重点听2、3号发言和票型再定立场。",
+      "data": {}
+    },
+    {
+      "event_id": 25,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 2,
+      "target": null,
+      "content": "我是2号，平民。警长竞选时我参与后退选，4号拿警徽我没有意见。目前场上只有4号一个预言家起跳，报1号金水，查验归属清晰，我倾向先认这个体系，1号暂时放一放。昨晚平安夜，说明女巫用解药救过人，女巫还在场，狼人确实出了刀。后面重点听有无对跳、查验逻辑和票型，我不会盲目跟票，按发言和票型再判断。先过。",
+      "data": {}
+    },
+    {
+      "event_id": 26,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 3,
+      "target": null,
+      "content": "我是3号。目前4号在警长竞选跳预言家、报1号金水并拿到警徽，全场目前唯一起跳，查验归属也算清晰，我倾向先认这个体系，1号暂时放一放。昨晚平安夜，按规则狼人每夜必出刀，那只能是女巫用解药救了刀口，女巫应该还在场。后面我会重点听有没有人对跳、查验逻辑以及票型，不会盲目跟票。先过。",
+      "data": {}
+    },
+    {
+      "event_id": 27,
+      "day": 1,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": null,
+      "content": "我是4号，真预言家，现任警长。首夜我查验1号，结果是金水，这是我自己的真实查验，归属明确。昨晚平安夜，狼人每夜必出刀，只能是女巫用解药救了刀口，女巫还在场。目前场上没有人和我对跳预言家，各位也倾向认我的体系，谢谢。今晚我准备在6、7、9这些发言偏模板化的人里选一个验，明天报结果。请大家继续把查验归属分清，不要把我没发表的查验安到我头上。若有人对跳，我们当场对比查验逻辑。先过。",
+      "data": {}
+    },
+    {
+      "event_id": 28,
+      "day": 1,
+      "phase": "day_vote",
+      "event_type": "exile_votes",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "放逐投票结果公布",
+      "data": {
+        "votes": [
+          {
+            "voter": 1,
+            "target": 2,
+            "units": 2
+          },
+          {
+            "voter": 2,
+            "target": 3,
+            "units": 2
+          },
+          {
+            "voter": 3,
+            "target": 5,
+            "units": 2
+          },
+          {
+            "voter": 4,
+            "target": 6,
+            "units": 3
+          },
+          {
+            "voter": 5,
+            "target": 2,
+            "units": 2
+          },
+          {
+            "voter": 6,
+            "target": 4,
+            "units": 2
+          },
+          {
+            "voter": 7,
+            "target": 5,
+            "units": 2
+          },
+          {
+            "voter": 8,
+            "target": 2,
+            "units": 2
+          },
+          {
+            "voter": 9,
+            "target": 3,
+            "units": 2
+          }
+        ],
+        "vote_units": {
+          "2": 6,
+          "3": 4,
+          "5": 4,
+          "6": 3,
+          "4": 2
+        }
+      }
+    },
+    {
+      "event_id": 29,
+      "day": 1,
+      "phase": "day_vote",
+      "event_type": "player_exiled",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 2,
+      "target": null,
+      "content": "2号被放逐",
+      "data": {
+        "seat": 2
+      }
+    },
+    {
+      "event_id": 30,
+      "day": 1,
+      "phase": "day_vote",
+      "event_type": "last_words",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 2,
+      "target": null,
+      "content": "我是2号，平民出局，无特殊身份。票型：1、5、8投我，3、7投5，9和我投3，6反投4号警长。6号发言认4号预言家体系却投警长，言行矛盾，建议优先排查；1、5、8抱团冲票的动机也请后续留意。好人继续认4号体系、听今晚查验，别被带节奏。",
+      "data": {}
+    },
+    {
+      "event_id": 31,
+      "day": 2,
+      "phase": "night_wolf",
+      "event_type": "wolf_target",
+      "visibility": "wolves",
+      "recipients": [],
+      "actor": null,
+      "target": 5,
+      "content": "狼队选择袭击 5 号",
+      "data": {
+        "target": 5
+      }
+    },
+    {
+      "event_id": 32,
+      "day": 2,
+      "phase": "night_seer",
+      "event_type": "seer_result",
+      "visibility": "private",
+      "recipients": [
+        4
+      ],
+      "actor": 4,
+      "target": 5,
+      "content": "查验 5 号的结果为 good",
+      "data": {
+        "target": 5,
+        "alignment": "good"
+      }
+    },
+    {
+      "event_id": 33,
+      "day": 2,
+      "phase": "night_witch",
+      "event_type": "witch_action",
+      "visibility": "private",
+      "recipients": [
+        8
+      ],
+      "actor": 8,
+      "target": null,
+      "content": "女巫选择 pass",
+      "data": {
+        "action": "pass",
+        "target": null
+      }
+    },
+    {
+      "event_id": 34,
+      "day": 2,
+      "phase": "night_resolution",
+      "event_type": "night_resolution",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "夜间内部结算完成，死亡尚未公布",
+      "data": {
+        "pending_deaths": [
+          {
+            "seat": 5,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ],
+        "wolf_recipients": [
+          3,
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "event_id": 35,
+      "day": 2,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_deaths",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "昨夜死亡：5号",
+      "data": {
+        "deaths": [
+          5
+        ]
+      }
+    },
+    {
+      "event_id": 36,
+      "day": 2,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_death_causes",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "首夜死亡原因已结算",
+      "data": {
+        "deaths": [
+          {
+            "seat": 5,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": 37,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "speaking_order",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": null,
+      "content": "警长选择clockwise方向，警长最后发言",
+      "data": {
+        "sheriff": 4,
+        "direction": "clockwise",
+        "order": [
+          6,
+          7,
+          8,
+          9,
+          1,
+          3,
+          4
+        ]
+      }
+    },
+    {
+      "event_id": 38,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 6,
+      "target": null,
+      "content": "我是6号，目前场上还有7人。昨天2号和5号出局了，今天白天我们先听听大家的发言，特别是警长4号的归票方向。我暂时没有特别明确的信息，先保持观察，等听完一圈再表态。",
+      "data": {}
+    },
+    {
+      "event_id": 39,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 7,
+      "target": null,
+      "content": "我是7号，平民。昨天2号被放逐，临死报的是平民；今天早上5号也走了，报的也是平民。如果这两条都属实，场上恐怕只剩一个民了，好人这边的容错其实不多了。目前我还是倾向继续认4号预言家体系，先听4号警长今天的查验结果和归票方向。6号刚才发言比较稳，我也先不急着盘谁有嫌疑，等警长给方向再跟票，不分散好人的票。",
+      "data": {}
+    },
+    {
+      "event_id": 40,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 8,
+      "target": null,
+      "content": "我是8号。目前场上还有7人，昨天2号和5号出局。我暂时没有特别明确的信息，先听听大家的发言，特别是警长4号的查验结果和归票方向。我倾向跟随警长体系，等4号给出方向后再表态跟票。",
+      "data": {}
+    },
+    {
+      "event_id": 41,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 9,
+      "target": null,
+      "content": "我是9号，平民。目前场上7人，2号和5号出局。昨天2号被放逐报平民，今早5号也报平民，如果属实，场上可能只剩我一个民了，好人容错很低。我注意到昨天票型比较分散：2号、3号、5号、6号都有人投，说明第一天信息并不统一。目前我倾向继续认4号警长体系，等4号给出今天的查验结果和归票方向。我作为平民没有额外信息，会跟警长归票，不分散好人票。",
+      "data": {}
+    },
+    {
+      "event_id": 42,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 1,
+      "target": null,
+      "content": "我是1号，4号首夜查我金水，我作为被查者继续认4号体系。昨晚5号出局，加上2、5都报平民，民线压力很大，好人不能再分散票。我建议先听4号今天的查验和归票方向，我会跟警长走。另外我留意到：昨天6号嘴上认4号体系，投票时却投了4号，言行矛盾，今天值得重点听6号解释。我先不跳身份，把信息留给关键轮次。",
+      "data": {}
+    },
+    {
+      "event_id": 43,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 3,
+      "target": null,
+      "content": "我是3号。昨天票型确实很散，2、3、5、6都吃到票，第一天信息本来就少，单看票型不宜定罪。1号提6号言行矛盾我可以理解，但6号公开立场一直是认4号体系，我更倾向先听4号今天的查验再判断，不要提前分散注意力。现在2、5都报平民，民线压力很大，好人更不能乱票。我支持继续认4号警长体系，等4号报查验和归票方向，我跟警长走。",
+      "data": {}
+    },
+    {
+      "event_id": 44,
+      "day": 2,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": null,
+      "content": "我是4号，警长兼预言家。首夜查验1号是金水，1号可以信任。昨晚5号出局，加上2号、5号都报平民，民线压力确实很大，好人不能再分散票。目前场上7人，我建议今天集中听发言，找出矛盾点，归票方向我会在听完所有人发言后给出。请大家跟警长走，不要乱票。",
+      "data": {}
+    },
+    {
+      "event_id": 45,
+      "day": 2,
+      "phase": "day_vote",
+      "event_type": "exile_votes",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "放逐投票结果公布",
+      "data": {
+        "votes": [
+          {
+            "voter": 1,
+            "target": 6,
+            "units": 2
+          },
+          {
+            "voter": 3,
+            "target": 1,
+            "units": 2
+          },
+          {
+            "voter": 4,
+            "target": 6,
+            "units": 3
+          },
+          {
+            "voter": 6,
+            "target": 4,
+            "units": 2
+          },
+          {
+            "voter": 7,
+            "target": 1,
+            "units": 2
+          },
+          {
+            "voter": 8,
+            "target": 6,
+            "units": 2
+          },
+          {
+            "voter": 9,
+            "target": 6,
+            "units": 2
+          }
+        ],
+        "vote_units": {
+          "6": 9,
+          "1": 4,
+          "4": 2
+        }
+      }
+    },
+    {
+      "event_id": 46,
+      "day": 2,
+      "phase": "day_vote",
+      "event_type": "player_exiled",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 6,
+      "target": null,
+      "content": "6号被放逐",
+      "data": {
+        "seat": 6
+      }
+    },
+    {
+      "event_id": 47,
+      "day": 2,
+      "phase": "day_vote",
+      "event_type": "last_words",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 6,
+      "target": null,
+      "content": "我是6号，被放逐了。我公开立场一直是认4号警长体系，昨天投票投4号是因为当时对票型有疑虑，但今天听完发言我仍然支持4号体系。场上民线压力很大，2号和5号都报平民，好人不能再分散票。我建议好人继续跟警长4号走，集中归票，不要被分散注意力。我作为普通好人没有额外信息，遗言就这些。",
+      "data": {}
+    },
+    {
+      "event_id": 48,
+      "day": 3,
+      "phase": "night_wolf",
+      "event_type": "wolf_target",
+      "visibility": "wolves",
+      "recipients": [],
+      "actor": null,
+      "target": 4,
+      "content": "狼队选择袭击 4 号",
+      "data": {
+        "target": 4
+      }
+    },
+    {
+      "event_id": 49,
+      "day": 3,
+      "phase": "night_seer",
+      "event_type": "seer_result",
+      "visibility": "private",
+      "recipients": [
+        4
+      ],
+      "actor": 4,
+      "target": 7,
+      "content": "查验 7 号的结果为 werewolf",
+      "data": {
+        "target": 7,
+        "alignment": "werewolf"
+      }
+    },
+    {
+      "event_id": 50,
+      "day": 3,
+      "phase": "night_witch",
+      "event_type": "witch_action",
+      "visibility": "private",
+      "recipients": [
+        8
+      ],
+      "actor": 8,
+      "target": null,
+      "content": "女巫选择 pass",
+      "data": {
+        "action": "pass",
+        "target": null
+      }
+    },
+    {
+      "event_id": 51,
+      "day": 3,
+      "phase": "night_resolution",
+      "event_type": "night_resolution",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "夜间内部结算完成，死亡尚未公布",
+      "data": {
+        "pending_deaths": [
+          {
+            "seat": 4,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ],
+        "wolf_recipients": [
+          3,
+          7
+        ]
+      }
+    },
+    {
+      "event_id": 52,
+      "day": 3,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_deaths",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "昨夜死亡：4号",
+      "data": {
+        "deaths": [
+          4
+        ]
+      }
+    },
+    {
+      "event_id": 53,
+      "day": 3,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_death_causes",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "首夜死亡原因已结算",
+      "data": {
+        "deaths": [
+          {
+            "seat": 4,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": 54,
+      "day": 3,
+      "phase": "badge_transfer",
+      "event_type": "badge_transferred",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 4,
+      "target": 1,
+      "content": "4号将警徽移交给1号；按公共警徽流，其最后查验声明为7号狼人",
+      "data": {
+        "from": 4,
+        "to": 1,
+        "badge_flow": {
+          "check_target": 7,
+          "alignment": "werewolf"
+        }
+      }
+    },
+    {
+      "event_id": 55,
+      "day": 3,
+      "phase": "day_speech",
+      "event_type": "speaking_order",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 1,
+      "target": null,
+      "content": "警长选择counterclockwise方向，警长最后发言",
+      "data": {
+        "sheriff": 1,
+        "direction": "counterclockwise",
+        "order": [
+          9,
+          8,
+          7,
+          3,
+          1
+        ]
+      }
+    },
+    {
+      "event_id": 56,
+      "day": 3,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 9,
+      "target": null,
+      "content": "我是9号，平民。目前存活5人，局势已到关键阶段。我建议我们对比一下各人的发言和票型，找出前后矛盾的地方。查验声明只是声明，不能当作确认事实，需要看发言是否自洽。我目前没有足够依据指向具体某个人，希望大家提供更多信息来缩小范围。",
+      "data": {}
+    },
+    {
+      "event_id": 57,
+      "day": 3,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 8,
+      "target": null,
+      "content": "我是8号。目前存活5人，局势确实到了关键阶段。我同意9号的说法，查验声明只是声明，不能当作确认事实，关键要看发言是否自洽、票型是否矛盾。我目前也没有足够依据指向具体某个人，希望大家继续提供信息来缩小范围。",
+      "data": {}
+    },
+    {
+      "event_id": 58,
+      "day": 3,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 7,
+      "target": null,
+      "content": "我是7号。目前存活5人，局势确实到了关键阶段。我同意9号和8号的说法，查验声明只是声明，不能当作确认事实，关键要看发言是否自洽、票型是否矛盾。我目前也没有足够依据指向具体某个人，希望大家继续提供信息来缩小范围。",
+      "data": {}
+    },
+    {
+      "event_id": 59,
+      "day": 3,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 3,
+      "target": null,
+      "content": "我是3号。目前存活5人，局势确实到了关键阶段。我同意前面几位的说法，查验声明只是声明，不能当作确认事实，关键要看发言是否自洽、票型是否矛盾。我目前也没有足够依据指向具体某个人，希望大家继续提供信息来缩小范围。",
+      "data": {}
+    },
+    {
+      "event_id": 60,
+      "day": 3,
+      "phase": "day_speech",
+      "event_type": "day_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 1,
+      "target": null,
+      "content": "我是1号，也是现任警长。目前存活5人，局势确实到了关键阶段。我同意前面几位的说法，查验声明只是声明，不能当作确认事实，关键要看发言是否自洽、票型是否矛盾。我目前也没有足够依据指向具体某个人，希望大家继续提供信息来缩小范围。",
+      "data": {}
+    },
+    {
+      "event_id": 61,
+      "day": 3,
+      "phase": "day_vote",
+      "event_type": "exile_votes",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "放逐投票结果公布",
+      "data": {
+        "votes": [
+          {
+            "voter": 1,
+            "target": 3,
+            "units": 3
+          },
+          {
+            "voter": 3,
+            "target": 1,
+            "units": 2
+          },
+          {
+            "voter": 7,
+            "target": 1,
+            "units": 2
+          },
+          {
+            "voter": 8,
+            "target": 7,
+            "units": 2
+          },
+          {
+            "voter": 9,
+            "target": 7,
+            "units": 2
+          }
+        ],
+        "vote_units": {
+          "3": 3,
+          "1": 4,
+          "7": 4
+        }
+      }
+    },
+    {
+      "event_id": 62,
+      "day": 3,
+      "phase": "day_pk_speech",
+      "event_type": "pk_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 7,
+      "target": null,
+      "content": "我是7号。目前存活5人，局势确实到了关键阶段。我同意前面几位的说法，查验声明只是声明，不能当作确认事实，关键要看发言是否自洽、票型是否矛盾。我目前也没有足够依据指向具体某个人，希望大家继续提供信息来缩小范围。",
+      "data": {
+        "tied_seats": [
+          1,
+          7
+        ]
+      }
+    },
+    {
+      "event_id": 63,
+      "day": 3,
+      "phase": "day_pk_speech",
+      "event_type": "pk_speech",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 1,
+      "target": null,
+      "content": "我是1号，现任警长。目前平票焦点在我和7号之间。我注意到大家的发言高度一致，缺乏实质信息。作为警长，我建议在PK中大家不要空谈，而是给出具体指向。我目前没有足够依据直接指认某人，但我会基于后续发言和票型做出判断。",
+      "data": {
+        "tied_seats": [
+          1,
+          7
+        ]
+      }
+    },
+    {
+      "event_id": 64,
+      "day": 3,
+      "phase": "day_revote",
+      "event_type": "exile_revotes",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "放逐投票结果公布",
+      "data": {
+        "votes": [
+          {
+            "voter": 3,
+            "target": 1,
+            "units": 2
+          },
+          {
+            "voter": 8,
+            "target": 7,
+            "units": 2
+          },
+          {
+            "voter": 9,
+            "target": 7,
+            "units": 2
+          }
+        ],
+        "vote_units": {
+          "1": 2,
+          "7": 4
+        }
+      }
+    },
+    {
+      "event_id": 65,
+      "day": 3,
+      "phase": "day_vote",
+      "event_type": "player_exiled",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 7,
+      "target": null,
+      "content": "7号被放逐",
+      "data": {
+        "seat": 7
+      }
+    },
+    {
+      "event_id": 66,
+      "day": 3,
+      "phase": "day_vote",
+      "event_type": "last_words",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 7,
+      "target": null,
+      "content": "我是7号。目前存活5人，局势确实到了关键阶段。我同意前面几位的说法，查验声明只是声明，不能当作确认事实，关键要看发言是否自洽、票型是否矛盾。我目前也没有足够依据指向具体某个人，希望大家继续提供信息来缩小范围。",
+      "data": {}
+    },
+    {
+      "event_id": 67,
+      "day": 4,
+      "phase": "night_wolf",
+      "event_type": "wolf_target",
+      "visibility": "wolves",
+      "recipients": [],
+      "actor": null,
+      "target": 1,
+      "content": "狼队选择袭击 1 号",
+      "data": {
+        "target": 1
+      }
+    },
+    {
+      "event_id": 68,
+      "day": 4,
+      "phase": "night_witch",
+      "event_type": "witch_action",
+      "visibility": "private",
+      "recipients": [
+        8
+      ],
+      "actor": 8,
+      "target": 3,
+      "content": "女巫选择 poison",
+      "data": {
+        "action": "poison",
+        "target": 3
+      }
+    },
+    {
+      "event_id": 69,
+      "day": 4,
+      "phase": "night_resolution",
+      "event_type": "night_resolution",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "夜间内部结算完成，死亡尚未公布",
+      "data": {
+        "pending_deaths": [
+          {
+            "seat": 1,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          },
+          {
+            "seat": 3,
+            "causes": [
+              "poison"
+            ],
+            "effective_cause": "poison"
+          }
+        ],
+        "wolf_recipients": [
+          3
+        ]
+      }
+    },
+    {
+      "event_id": 70,
+      "day": 4,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_deaths",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "昨夜死亡：1号、3号",
+      "data": {
+        "deaths": [
+          1,
+          3
+        ]
+      }
+    },
+    {
+      "event_id": 71,
+      "day": 4,
+      "phase": "dawn_announcement",
+      "event_type": "dawn_death_causes",
+      "visibility": "god",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "首夜死亡原因已结算",
+      "data": {
+        "deaths": [
+          {
+            "seat": 1,
+            "causes": [
+              "werewolf"
+            ],
+            "effective_cause": "werewolf"
+          },
+          {
+            "seat": 3,
+            "causes": [
+              "poison"
+            ],
+            "effective_cause": "poison"
+          }
+        ]
+      }
+    },
+    {
+      "event_id": 72,
+      "day": 4,
+      "phase": "hunter_shot",
+      "event_type": "hunter_shot",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 1,
+      "target": 8,
+      "content": "1号猎人开枪带走8号",
+      "data": {
+        "hunter": 1,
+        "target": 8
+      }
+    },
+    {
+      "event_id": 73,
+      "day": 4,
+      "phase": "badge_transfer",
+      "event_type": "badge_transferred",
+      "visibility": "public",
+      "recipients": [],
+      "actor": 1,
+      "target": 9,
+      "content": "1号将警徽移交给9号",
+      "data": {
+        "from": 1,
+        "to": 9
+      }
+    },
+    {
+      "event_id": 74,
+      "day": 4,
+      "phase": "finished",
+      "event_type": "game_finished",
+      "visibility": "public",
+      "recipients": [],
+      "actor": null,
+      "target": null,
+      "content": "游戏结束：good阵营获胜",
+      "data": {
+        "winner": "good",
+        "reason": "all_wolves_dead",
+        "roles": [
+          {
+            "seat": 1,
+            "role": "hunter"
+          },
+          {
+            "seat": 2,
+            "role": "villager"
+          },
+          {
+            "seat": 3,
+            "role": "werewolf"
+          },
+          {
+            "seat": 4,
+            "role": "seer"
+          },
+          {
+            "seat": 5,
+            "role": "villager"
+          },
+          {
+            "seat": 6,
+            "role": "werewolf"
+          },
+          {
+            "seat": 7,
+            "role": "werewolf"
+          },
+          {
+            "seat": 8,
+            "role": "witch"
+          },
+          {
+            "seat": 9,
+            "role": "villager"
+          }
+        ]
+      }
+    }
+  ]
+}

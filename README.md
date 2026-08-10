@@ -1,8 +1,17 @@
 # WolfScope
 
-WolfScope 是一个基于 AgentScope 的九人狼人杀多智能体博弈与评测项目。项目采用“确定性 Python 裁判 + 角色隔离的 Agent 决策”架构：游戏规则、真实身份、信息可见性和胜负判断由 Engine 掌握，LLM 只能根据自己的玩家视角提交结构化行动。
+WolfScope 是一个基于 AgentScope 的九人狼人杀多智能体博弈与评测项目。它关注的不是“让九个模型轮流聊天”，而是三个更难的问题：如何严格隔离每名玩家的信息、如何把长对话转化成可审计证据、如何让不稳定的模型输出安全地驱动确定性规则引擎。
 
-M1 确定性游戏内核已经完成。无需调用 LLM，即可用固定 seed 和严格剧本运行完整九人局并生成上帝视角 JSON Replay。项目现已进入 M2；九玩家隔离、Evidence、SituationBrief、粗粒度角色 Strategy、公开发言/放逐投票和警长竞选 Agent 决策链均已接入。
+项目采用“确定性 Python 裁判 + 九个座位隔离 Agent”架构。身份、夜间结算、可见性和胜负判断由 Engine 独占；LLM 只能读取自己的 `PlayerView`，并通过严格 Schema 提交一次结构化行动。固定 seed 可复现实验，完整 GOD 事件流写入 JSON Replay。
+
+## 项目亮点
+
+- **信息隔离**：PUBLIC、WOLVES、PRIVATE、GOD 四级事件路由，Agent 无法读取上帝 `GameState`。
+- **认知流水线**：公开发言只提取一次并缓存为 Claim；每个座位独立维护 Evidence、Belief、DecisionBrief 与 StrategyBrief。
+- **认识论边界**：公开身份和查验始终是 `claimed`，不会被错误升级为 Engine 认证事实；对跳双方的查验归属严格分离。
+- **规则与策略解耦**：Engine 负责合法性，策略层只提供粗粒度方法；预言家警徽流、狼队悍跳时间线等关键行为另有本地硬约束。
+- **可审计降级**：结构化输出失败依次经过格式修复、复杂度降级和确定性兜底，所有失败原因与 Token/延迟写入 Trace。
+- **自动评测**：批量固定 seed 运行真实完整局，统计胜负、弃票、放逐阵营、神职技能、警徽流、Schema 成功率和复杂度降级。
 
 ## 当前功能
 
@@ -28,7 +37,15 @@ GameEngine（唯一推进阶段和天数）
 └── DeathResolutionEngine
 
 GameEngine → EventLog → GOD-view replay.json
-                  └── GameMessageRouter → 玩家授权事件
+                  └── GameMessageRouter → PlayerView
+                                             ↓
+公开发言 → ClaimExtractor → EvidenceLedger（每座位隔离）
+                              ↓
+              Belief / DecisionBrief / StrategyBrief
+                              ↓
+                    AgentScope structured output
+                              ↓
+                 Runtime 校验 → Engine 执行
 ```
 
 顶层 `GameEngine` 只编排阶段；各阶段 Engine 负责规则校验和状态变更。Provider 只能接收角色限定的 Observation，不能读取上帝 `GameState`。
@@ -44,6 +61,18 @@ python -m pip install -e .
 ```
 
 项目当前固定使用 AgentScope 2.0.5。
+
+## AgentScope 用在什么地方
+
+AgentScope 位于模型适配层，而不是规则内核：
+
+- `PlayerRuntimeRegistry` 为1–9号座位创建隔离 Runtime，避免共享私有上下文。
+- `AgentScopeModelGateway` 调用模型并请求 Pydantic 结构化输出。
+- 同一个 Gateway 同时服务玩家决策与公共 Claim 提取，但两者拥有独立 Schema、Trace 和失败诊断。
+- Thinking/non-thinking、Token预算、请求超时和复杂度降级由任务类型控制。
+- `ScriptedProvider` 不会被正式对局动态调用，仅保留为无需API的确定性规则回归工具。
+
+Engine、PlayerView、Evidence 和 Replay 均不依赖 AgentScope 类型，因此规则测试不需要模型或网络。
 
 ## 运行 M1 验收对局
 
@@ -76,7 +105,7 @@ wolfscope-m1 good-win-seed-42 --output-dir replays --overwrite
 python -m unittest discover -s tests
 ```
 
-当前包含 192 项自动化测试，覆盖确定性规则内核、AgentScope 决策、警长竞选 Agent、夜间角色 Agent、死亡技能/遗言 Agent、完整多日 Agent 终局和 Replay 往返，以及 EvidenceLedger、规则推导、公共 Claim、失败回归样本、Evidence/Strategy 引用审计、分阶段发言长度控制、ID 隔离、失败降级和自动评测聚合。
+当前包含204项自动化测试，覆盖确定性规则内核、AgentScope决策、警长竞选、夜间角色、死亡技能、完整多日终局和Replay往返，以及EvidenceLedger、公共Claim、警徽流、查验归属、悍跳时间线、ID隔离、失败降级和自动评测聚合。
 
 ## 运行 M3 自动评测
 
@@ -104,6 +133,27 @@ wolfscope-eval --aggregate-only \
   --output-dir artifacts/evaluation/flash-baseline-v1
 ```
 
+## 结项评测
+
+最终固定 seed 评测使用 DeepSeek V4 Flash、`balanced` 投票上下文和最多8天限制：
+
+| 指标 | 结果 |
+|---|---:|
+| 完成对局 | 8 / 8 |
+| 玩家决策 | 522 |
+| 最终结构化成功率 | 97.3% |
+| L3确定性兜底率 | 2.7% |
+| 放逐投票弃票率 | 1.5% |
+| 好人 / 狼人胜利 | 1 / 7 |
+| 放逐狼人 / 好人 | 8 / 11 |
+| 猎人开枪 | 6 / 7次机会 |
+| 预言家警徽传给本人查杀 | 0 |
+
+- [结项评测报告](artifacts/evaluation/portfolio-final-v1/report.md)
+- [代表性好人胜利 Replay（seed 15）](artifacts/evaluation/portfolio-final-v1/replays/seed-15.json)
+
+8局样本用于工程稳定性验收，不足以估计真实阵营胜率。当前结果仍呈明显狼人优势，说明“共享信息较少的好人如何形成稳健共识”尚未完全解决；这是项目明确保留的后续研究方向，而不是被隐藏的展示数据。
+
 ## 项目文档
 
 - [项目立项书](PROJECT_PROPOSAL.md)
@@ -120,6 +170,8 @@ wolfscope-eval --aggregate-only \
 - [M3-1 自动对局评测](docs/M3_1_GAME_EVALUATION.md)
 - [架构决策记录](docs/decisions/)
 
-## 当前阶段
+## 项目边界与后续方向
 
-M1 已完成，M2 已跑通完整 Agent 对局。正式 `AgentGameProvider` 不依赖 Support，公开发言/投票、警长、夜间角色、PK/遗言、猎人枪权、发言方向和警徽处理均由座位隔离 Runtime 决策。seed 42 的真实 Flash 对局在第2天由狼人屠神结束：54次玩家决策、18次语义提取、44个 GOD 事件，标准 Replay 已通过写入/读取校验。`ScriptedProvider` 只保留为确定性回归工具；正式实验中的九名玩家统一使用 DeepSeek Flash，不做动态模型路由。
+当前版本已完成 M1 确定性规则内核、M2 完整 Agent 对局与 M3 自动评测，可作为作品集版本结项。正式 `AgentGameProvider` 不依赖 Support，九名玩家统一使用同一模型档位，不做按身份模型路由。
+
+后续方向刻意不纳入本次结项范围：扩大评测样本、校准好人工作共识、建立失败样本驱动的 Claim 标注集、加入更精细的对手模型，以及扩展更多角色和板子。项目不开发Web对局前端，展示以README、评测报告和Replay为主。
