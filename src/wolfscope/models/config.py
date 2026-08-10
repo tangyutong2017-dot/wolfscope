@@ -28,7 +28,7 @@ class DeepSeekModelConfig(BaseModel):
 _MODEL_PROFILES = {
     ModelProfile.TEST: DeepSeekModelConfig(model_name="deepseek-v4-flash"),
     ModelProfile.PRODUCTION: DeepSeekModelConfig(
-        model_name="deepseek-v4-pro",
+        model_name="deepseek-v4-flash",
         temperature=0.5,
     ),
 }

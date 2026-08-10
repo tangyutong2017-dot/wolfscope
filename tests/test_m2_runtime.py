@@ -86,14 +86,14 @@ def vote_input(seat: int = 4) -> AgentDecisionInput:
 
 
 class ModelConfigTests(unittest.IsolatedAsyncioTestCase):
-    def test_test_profile_is_flash_and_production_is_pro(self) -> None:
+    def test_test_and_production_profiles_use_flash(self) -> None:
         self.assertEqual(
             model_config_for(ModelProfile.TEST).model_name,
             "deepseek-v4-flash",
         )
         self.assertEqual(
             model_config_for(ModelProfile.PRODUCTION).model_name,
-            "deepseek-v4-pro",
+            "deepseek-v4-flash",
         )
         self.assertEqual(model_config_for(ModelProfile.TEST).temperature, 0.3)
         self.assertEqual(model_config_for(ModelProfile.PRODUCTION).temperature, 0.5)
